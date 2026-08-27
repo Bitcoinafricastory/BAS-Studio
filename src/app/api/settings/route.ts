@@ -66,3 +66,7 @@ export async function DELETE() {
     return NextResponse.json({ error: err.message || "Failed to remove key" }, { status: 500 });
   }
 }
+
+export const dynamic = "force-dynamic";
+
+export const dynamic = "force-dynamic";

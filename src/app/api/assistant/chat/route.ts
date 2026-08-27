@@ -85,3 +85,7 @@ ${
     return NextResponse.json({ error: err.message || "Assistant request failed" }, { status: 500 });
   }
 }
+
+export const dynamic = "force-dynamic";
+
+export const dynamic = "force-dynamic";

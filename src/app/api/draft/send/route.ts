@@ -29,3 +29,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message || "Failed to save draft" }, { status: 500 });
   }
 }
+
+export const dynamic = "force-dynamic";
+
+export const dynamic = "force-dynamic";

@@ -30,3 +30,7 @@ export async function GET() {
     return NextResponse.json({ error: err.message || "Failed to load leads" }, { status: 500 });
   }
 }
+
+export const dynamic = "force-dynamic";
+
+export const dynamic = "force-dynamic";

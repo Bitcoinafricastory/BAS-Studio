@@ -16,3 +16,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message || "Draft generation failed" }, { status: 500 });
   }
 }
+
+export const dynamic = "force-dynamic";
+
+export const dynamic = "force-dynamic";
