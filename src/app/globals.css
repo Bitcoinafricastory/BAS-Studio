@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-montserrat: "Montserrat", sans-serif;
+}
+
+body {
+  background-color: #000000;
+  color: #f9fafb;
+}
+
+/* Quill editor overrides live in components/editor once StoryEditor is ported in */
