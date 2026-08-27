@@ -166,7 +166,7 @@ const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(function Sto
       const Quill = mod.Quill || (mod.default && mod.default.Quill);
       if (!Quill) return;
       try {
-        const Font = Quill.import('attributors/class/font');
+        const Font = Quill.import('attributors/class/font') as any;
         Font.whitelist = FONT_WHITELIST;
         Quill.register(Font, true);
       } catch {

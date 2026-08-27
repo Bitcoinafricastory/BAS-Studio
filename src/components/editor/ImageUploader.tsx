@@ -28,7 +28,7 @@ export default function ImageUploader({
   const [mode, setMode] = useState('upload');
   const [dragging, setDragging] = useState(false);
   const [localPreview, setLocalPreview] = useState(preview || (typeof value === 'string' ? value : ''));
-  const inputRef = useRef(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback(
     (file: File | null | undefined) => {
