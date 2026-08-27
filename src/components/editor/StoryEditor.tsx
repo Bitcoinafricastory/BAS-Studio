@@ -1,5 +1,10 @@
 'use client';
 
+// Converted to .tsx from the original StoryEditor.jsx so TypeScript can see real prop
+// types through the forwardRef call (an untyped forwardRef in a plain .jsx file infers
+// as {} and breaks type-checking on every prop passed to it — this is what fixes that).
+// No behavior, styling, or logic changed from the .jsx version.
+
 // NOTE: This is BAS Studio's copy of the site's StoryEditor.jsx (kept in sync manually).
 // The only functional change from the original: it forwards a ref exposing the underlying
 // Quill instance, and an onSelectionChange callback. Both are additive — visuals, toolbar,
@@ -10,7 +15,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import 'react-quill-new/dist/quill.snow.css';
 
-const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
+const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false }) as any;
 
 const fontSizeArr = ['10px', '12px', '14px', '16px', '18px', '20px', '24px', '30px', '36px', '48px'];
 
@@ -135,8 +140,22 @@ const darkStyles = `
 .bas-quill-dark .ql-toolbar .ql-picker-label { border-color: transparent; }
 `;
 
-const StoryEditor = forwardRef(function StoryEditor({ value, onChange, dark = false, onSelectionChange }, ref) {
-  const quillRef = useRef(null);
+export interface StoryEditorHandle {
+  getQuill: () => any;
+}
+
+export interface StoryEditorProps {
+  value: string;
+  onChange: (content: string) => void;
+  dark?: boolean;
+  onSelectionChange?: (range: { index: number; length: number } | null) => void;
+}
+
+const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(function StoryEditor(
+  { value, onChange, dark = false, onSelectionChange },
+  ref
+) {
+  const quillRef = useRef<any>(null);
 
   // Register the named fonts with Quill's Parchment. Must run only on the
   // client (Quill imports break during SSR) and only once per page load.
@@ -171,7 +190,7 @@ const StoryEditor = forwardRef(function StoryEditor({ value, onChange, dark = fa
         theme="snow"
         value={value}
         onChange={onChange}
-        onChangeSelection={(range) => onSelectionChange?.(range)}
+        onChangeSelection={(range: { index: number; length: number } | null) => onSelectionChange?.(range)}
         modules={modules}
         formats={formats}
       />

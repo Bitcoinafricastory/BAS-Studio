@@ -1,17 +1,37 @@
 'use client';
 
+// Converted to .tsx from the original ImageUploader.jsx purely for explicit prop typing
+// (matches StoryEditor's conversion for the same reason). No behavior, styling, or logic
+// changed from the .jsx version.
+
 import { useState, useRef, useCallback } from 'react';
 import { Upload, Link2, X, ImageIcon } from 'lucide-react';
 
+export interface ImageUploaderProps {
+  value: string;
+  preview?: string;
+  onChange: (fileOrUrl: File | string, previewUrl: string) => void;
+  label?: string;
+  aspect?: string;
+  compact?: boolean;
+}
+
 // value can be a URL string or a Blob (pending upload).
-export default function ImageUploader({ value, preview, onChange, label = 'Image', aspect = 'aspect-video', compact = false }) {
+export default function ImageUploader({
+  value,
+  preview,
+  onChange,
+  label = 'Image',
+  aspect = 'aspect-video',
+  compact = false,
+}: ImageUploaderProps) {
   const [mode, setMode] = useState('upload');
   const [dragging, setDragging] = useState(false);
   const [localPreview, setLocalPreview] = useState(preview || (typeof value === 'string' ? value : ''));
   const inputRef = useRef(null);
 
   const handleFile = useCallback(
-    (file) => {
+    (file: File | null | undefined) => {
       if (!file || !file.type.startsWith('image/')) return;
       if (file.size > 5 * 1024 * 1024) {
         alert('Image must be under 5MB.');
@@ -24,7 +44,7 @@ export default function ImageUploader({ value, preview, onChange, label = 'Image
     [onChange]
   );
 
-  const handleDrop = (e) => {
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragging(false);
     const file = e.dataTransfer.files?.[0];
