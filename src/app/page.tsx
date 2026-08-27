@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, Dispatch, SetStateAction } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Mic, MicOff, ScanLine, Search, Loader2, ArrowUp, PenSquare } from "lucide-react";
 import ResearchCard from "@/components/assistant/ResearchCard";
@@ -281,7 +281,7 @@ function SearchBar({
   setInput: (v: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   deepSearch: boolean;
-  setDeepSearch: (v: boolean) => void;
+  setDeepSearch: Dispatch<SetStateAction<boolean>>;
   provider: "claude" | "grok";
   setProvider: (v: "claude" | "grok") => void;
   listening: boolean;
