@@ -25,6 +25,6 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ error: "Invalid passcode" }, { status: 401 });
 }
 
-export const dynamic = "force-dynamic";
+
 
 export const dynamic = "force-dynamic";

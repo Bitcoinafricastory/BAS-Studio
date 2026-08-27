@@ -6,6 +6,6 @@ export async function GET() {
   return NextResponse.json({ ok: session?.value === "ok" });
 }
 
-export const dynamic = "force-dynamic";
+
 
 export const dynamic = "force-dynamic";
