@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Image as ImageIcon, SquarePen, FileSearch, Search, PanelLeft, Settings } from "lucide-react";
+import { Image as ImageIcon, SquarePen, FileSearch, PanelLeft, Settings } from "lucide-react";
 
 const RAIL_LINKS = [
   { href: "/leads", label: "Leads", icon: ImageIcon },
@@ -29,25 +29,19 @@ export default function IconRail() {
           </div>
           {expanded && <span className="text-xs font-semibold text-gray-100 leading-tight">BAS Studio</span>}
         </Link>
-      </div>
-
-      <div className="flex items-center gap-1 px-3 pb-3">
-        <button
-          aria-label="Search"
-          className="text-gray-500 hover:text-gray-200 transition-colors p-1"
-        >
-          <Search size={16} />
-        </button>
+        {/* The lone non-functional search icon that lived here before is gone — a
+            clickable-looking element that did nothing was part of what made this feel
+            unfinished. The toggle is the only control that actually belongs in the header. */}
         <button
           aria-label="Toggle sidebar"
           onClick={() => setExpanded((e) => !e)}
-          className="text-gray-500 hover:text-gray-200 transition-colors p-1"
+          className="text-gray-500 hover:text-gray-200 transition-colors p-1 shrink-0"
         >
           <PanelLeft size={16} />
         </button>
       </div>
 
-      <nav className="flex flex-col gap-1 px-2 mt-2 flex-1">
+      <nav className="flex flex-col gap-1 px-2 py-3">
         {RAIL_LINKS.map(({ href, label, icon: Icon }) => {
           const active = pathname?.startsWith(href);
           return (
@@ -69,10 +63,14 @@ export default function IconRail() {
         })}
       </nav>
 
+      {/* Spacer pushes Settings to the bottom intentionally, not as leftover empty space —
+          the visible border above it now makes that grouping clear instead of ambiguous. */}
+      <div className="flex-1" />
+
       <Link
         href="/settings"
         title="Settings"
-        className={`flex items-center gap-3 px-2.5 py-2 mx-2 mb-3 rounded-lg text-sm transition-colors ${
+        className={`flex items-center gap-3 px-2.5 py-2 mx-2 mb-3 rounded-lg text-sm transition-colors border-t border-gray-900 pt-3 ${
           pathname?.startsWith("/settings")
             ? "bg-bas-gold/15 text-bas-gold"
             : "text-gray-500 hover:text-gray-100 hover:bg-gray-900/50"

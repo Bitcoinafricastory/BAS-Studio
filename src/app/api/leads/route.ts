@@ -5,6 +5,13 @@ import { fetchMarketRadar } from "@/lib/market-radar";
 import { fetchXRadar } from "@/lib/x-radar";
 import type { Source } from "@/types";
 
+// Every route here reads request-time secrets (Firebase, Anthropic, xAI) or
+// request data — never build-time static content. Without this, Next.js
+// attempts to statically pre-render GET routes at build time and fails
+// noisily (harmlessly) since those secrets are not available then.
+export const dynamic = "force-dynamic";
+
+
 export async function GET() {
   try {
     const db = getAdminDb();
@@ -30,7 +37,3 @@ export async function GET() {
     return NextResponse.json({ error: err.message || "Failed to load leads" }, { status: 500 });
   }
 }
-
-
-
-export const dynamic = "force-dynamic";

@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminBucket } from "@/lib/firebase-admin";
 
+// Every route here reads request-time secrets (Firebase, Anthropic, xAI) or
+// request data — never build-time static content. Without this, Next.js
+// attempts to statically pre-render GET routes at build time and fails
+// noisily (harmlessly) since those secrets are not available then.
+export const dynamic = "force-dynamic";
+
+
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
@@ -45,7 +52,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message || "Upload failed" }, { status: 500 });
   }
 }
-
-
-
-export const dynamic = "force-dynamic";

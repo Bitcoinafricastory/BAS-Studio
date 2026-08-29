@@ -3,6 +3,13 @@ import { getAnthropic, DEFAULT_MODEL } from "@/lib/anthropic";
 import { runResearch } from "@/lib/research";
 import { grokChat } from "@/lib/grok-chat";
 
+// Every route here reads request-time secrets (Firebase, Anthropic, xAI) or
+// request data — never build-time static content. Without this, Next.js
+// attempts to statically pre-render GET routes at build time and fails
+// noisily (harmlessly) since those secrets are not available then.
+export const dynamic = "force-dynamic";
+
+
 /**
  * Heuristic: a message that reads like a bare name/project ("Kes.Money", "Machankura",
  * "Fedi wallet Uganda") rather than a conversational instruction gets routed to quick
@@ -50,7 +57,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ type: "research", research });
     }
 
-    const client = getAnthropic();
+    const client = await getAnthropic();
 
     const system = `You are the BAS Studio assistant for Bitcoin Africa Story, an independent Bitcoin/Africa news site.
 You can see the writer's currently open draft below for context. You must NEVER edit it directly — only
@@ -85,7 +92,3 @@ ${
     return NextResponse.json({ error: err.message || "Assistant request failed" }, { status: 500 });
   }
 }
-
-
-
-export const dynamic = "force-dynamic";

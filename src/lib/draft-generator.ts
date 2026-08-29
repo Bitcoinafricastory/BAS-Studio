@@ -44,7 +44,7 @@ export async function generateDraft(
   kind: "notes" | "youtube" | "audio",
   sourceUrl?: string
 ): Promise<Draft> {
-  const client = getAnthropic();
+  const client = await getAnthropic();
   const samples = await getStyleSamples();
 
   const styleBlock = samples.length

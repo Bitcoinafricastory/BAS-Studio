@@ -31,7 +31,7 @@ outside the tags. Structure exactly:
 `.trim();
 
 export async function runResearch(query: string, depth: Depth = "quick"): Promise<ResearchResult> {
-  const client = getAnthropic();
+  const client = await getAnthropic();
 
   const response = await client.messages.create({
     model: DEFAULT_MODEL,

@@ -5,6 +5,13 @@ import path from "path";
 import { transcribeFile } from "@/lib/transcribe";
 import { getYoutubeTranscript } from "@/lib/youtube";
 
+// Every route here reads request-time secrets (Firebase, Anthropic, xAI) or
+// request data — never build-time static content. Without this, Next.js
+// attempts to statically pre-render GET routes at build time and fails
+// noisily (harmlessly) since those secrets are not available then.
+export const dynamic = "force-dynamic";
+
+
 export const runtime = "nodejs";
 export const maxDuration = 300; // local transcription can take a while
 
@@ -48,7 +55,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message || "Transcription failed" }, { status: 500 });
   }
 }
-
-
-
-export const dynamic = "force-dynamic";

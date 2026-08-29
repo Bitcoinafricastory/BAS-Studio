@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAnthropic, DEFAULT_MODEL } from "@/lib/anthropic";
 
+// Every route here reads request-time secrets (Firebase, Anthropic, xAI) or
+// request data — never build-time static content. Without this, Next.js
+// attempts to statically pre-render GET routes at build time and fails
+// noisily (harmlessly) since those secrets are not available then.
+export const dynamic = "force-dynamic";
+
+
 export async function POST(req: NextRequest) {
   try {
     const { selectedText, context } = await req.json();
@@ -8,7 +15,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "selectedText is required" }, { status: 400 });
     }
 
-    const client = getAnthropic();
+    const client = await getAnthropic();
     const response = await client.messages.create({
       model: DEFAULT_MODEL,
       max_tokens: 1000,
@@ -39,7 +46,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message || "Improve failed" }, { status: 500 });
   }
 }
-
-
-
-export const dynamic = "force-dynamic";

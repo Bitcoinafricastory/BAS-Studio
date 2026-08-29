@@ -23,7 +23,7 @@ Return at most 8 items, most significant first. If you find nothing genuinely ne
 
 export async function fetchMarketRadar(): Promise<Lead[]> {
   try {
-    const client = getAnthropic();
+    const client = await getAnthropic();
     const response = await client.messages.create({
       model: DEFAULT_MODEL,
       max_tokens: 3000,

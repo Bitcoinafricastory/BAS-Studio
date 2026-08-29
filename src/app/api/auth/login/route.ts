@@ -1,17 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { getPasscode } from "@/lib/passcode";
+
+// Every route here reads request-time secrets (Firebase, Anthropic, xAI) or
+// request data — never build-time static content. Without this, Next.js
+// attempts to statically pre-render GET routes at build time and fails
+// noisily (harmlessly) since those secrets are not available then.
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   const { passcode } = await req.json();
 
-  if (!process.env.BAS_STUDIO_PASSCODE) {
+  const expected = await getPasscode();
+  if (!expected) {
     return NextResponse.json(
-      { error: "BAS_STUDIO_PASSCODE is not set on the server" },
+      { error: "No passcode is configured yet. Set one from Settings, or set BAS_STUDIO_PASSCODE in .env.local." },
       { status: 500 }
     );
   }
 
-  if (passcode === process.env.BAS_STUDIO_PASSCODE) {
+  if (passcode === expected) {
     cookies().set("bas_studio_session", "ok", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -24,7 +32,3 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ error: "Invalid passcode" }, { status: 401 });
 }
-
-
-
-export const dynamic = "force-dynamic";
