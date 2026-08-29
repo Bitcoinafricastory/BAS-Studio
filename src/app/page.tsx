@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useRef, useEffect, useCallback, Dispatch, SetStateAction } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Mic, MicOff, ScanLine, Search, Loader2, ArrowUp, PenSquare } from "lucide-react";
@@ -140,18 +141,15 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col bg-black">
       {!started ? (
-        <div className="flex-1 flex flex-col items-center justify-center px-4">
-          <div className="flex items-center gap-3 mb-10">
-            <div className="w-14 h-14 bg-bas-gold rounded-lg flex items-center justify-center text-black font-bold text-2xl">
-              B
-            </div>
-            <div className="text-2xl font-bold leading-none text-gray-50 tracking-tight">
-              BITCOIN
-              <br />
-              AFRICA
-              <br />
-              STORY
-            </div>
+        <div className="flex-1 flex flex-col items-center justify-center px-4 relative overflow-hidden">
+          {/* Soft radial glow behind the mark — the one bit of visual flourish */}
+          <div
+            className="absolute w-[520px] h-[520px] rounded-full opacity-[0.07] blur-3xl pointer-events-none"
+            style={{ background: "radial-gradient(circle, #eab308 0%, transparent 70%)" }}
+          />
+
+          <div className="relative w-[220px] h-[106px] mb-12">
+            <Image src="/bas-logo-full.png" alt="Bitcoin Africa Story" fill className="object-contain" priority />
           </div>
 
           <SearchBar
@@ -170,22 +168,23 @@ export default function HomePage() {
             empty
           />
 
-          <div className="flex items-center gap-3 mt-5">
+          <div className="flex items-center gap-2.5 mt-5">
             {QUICK_CHIPS.map((chip) => (
               <button
                 key={chip.label}
                 onClick={() => send(chip.prompt)}
-                className="text-sm px-4 py-2 rounded-full bg-gray-800/60 hover:bg-gray-800 text-gray-200 transition-colors"
+                className="text-sm px-4 py-2 rounded-full bg-gray-900/70 border border-gray-800 hover:border-bas-gold/40 hover:text-bas-gold text-gray-300 transition-all"
               >
                 {chip.label}
               </button>
             ))}
           </div>
 
-          <p className="text-xs text-gray-500 mt-10">
-            Est. 2024 · <span className="text-bas-gold">Reporting from the ground</span>
+          <p className="text-xs text-gray-600 mt-12">
+            Est. 2024 · <span className="text-bas-gold/90">Reporting from the ground</span>
           </p>
         </div>
+
       ) : (
         <>
           <div className="flex items-center justify-end px-4 sm:px-8 pt-4">
@@ -294,7 +293,7 @@ function SearchBar({
   return (
     <form
       onSubmit={onSubmit}
-      className={`flex items-center gap-2 bg-gray-800/60 rounded-full pl-4 pr-2 py-2 ${
+      className={`flex items-center gap-2 bg-gray-900/70 border border-gray-800 rounded-full pl-4 pr-2 py-2 shadow-lg shadow-black/40 focus-within:border-bas-gold/30 transition-colors ${
         empty ? "w-full max-w-xl" : "w-full"
       }`}
     >
