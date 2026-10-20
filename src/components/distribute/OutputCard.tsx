@@ -99,7 +99,7 @@ export default function OutputCard({ spec, state, author, posted, onRegenerate, 
                 key={i}
                 onClick={() => setActive(i)}
                 className={`px-3 py-1 rounded-full transition-colors focus-ring ${
-                  active === i ? "bg-bas-gold text-black font-semibold" : "text-gray-400 hover:text-gray-100"
+                  active === i ? "bg-bas-gold text-on-gold font-semibold" : "text-gray-400 hover:text-gray-100"
                 }`}
               >
                 {i === 0 ? "A" : "B"}
@@ -150,7 +150,7 @@ export default function OutputCard({ spec, state, author, posted, onRegenerate, 
               </button>
               <button
                 onClick={() => setMarkOpen((o) => !o)}
-                className="text-xs px-3 py-1.5 rounded-full bg-bas-gold hover:bg-bas-gold-hover text-black font-semibold transition-colors focus-ring"
+                className="text-xs px-3 py-1.5 rounded-full bg-bas-gold hover:bg-bas-gold-hover text-on-gold font-semibold transition-colors focus-ring"
               >
                 Mark as posted
               </button>
@@ -172,7 +172,7 @@ export default function OutputCard({ spec, state, author, posted, onRegenerate, 
                 <button
                   onClick={save}
                   disabled={saving}
-                  className="text-sm px-4 rounded-lg bg-bas-gold text-black font-semibold disabled:opacity-50 focus-ring"
+                  className="text-sm px-4 rounded-lg bg-bas-gold text-on-gold font-semibold disabled:opacity-50 focus-ring"
                 >
                   {saving ? <Loader2 size={14} className="animate-spin" /> : "Save"}
                 </button>

@@ -249,7 +249,7 @@ export default function NewDraftPage() {
           </div>
           {draft.claimsToVerify?.length > 0 && (
             <div>
-              <p className="text-xs uppercase tracking-wide text-bas-gold mb-1">Claims to verify</p>
+              <p className="text-xs uppercase tracking-wide text-gold-fg mb-1">Claims to verify</p>
               <ul className="text-sm text-gray-300 list-disc list-inside space-y-0.5">
                 {draft.claimsToVerify.map((c, i) => (
                   <li key={i}>{c}</li>
@@ -292,7 +292,7 @@ function ModeTab({
     <button
       onClick={onClick}
       className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus-ring ${
-        active ? "bg-bas-gold text-black" : "text-gray-400 hover:text-gray-100"
+        active ? "bg-bas-gold text-on-gold" : "text-gray-400 hover:text-gray-100"
       }`}
     >
       <Icon size={15} /> {label}

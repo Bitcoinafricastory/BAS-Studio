@@ -269,7 +269,7 @@ export default function DistributePage() {
                     key={id}
                     onClick={() => toggle(id)}
                     className={`text-xs px-3 py-1.5 rounded-full border transition-colors focus-ring ${
-                      on ? "bg-bas-gold/15 border-bas-gold/50 text-bas-gold" : "border-gray-800 text-gray-400 hover:text-gray-100"
+                      on ? "bg-bas-gold/15 border-bas-gold/50 text-gold-fg" : "border-gray-800 text-gray-400 hover:text-gray-100"
                     }`}
                   >
                     {OUTPUT_SPECS[id].label}

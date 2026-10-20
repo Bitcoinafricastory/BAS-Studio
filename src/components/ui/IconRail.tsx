@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { applyTheme, readStoredMode, storeMode, type ThemeMode } from "@/lib/theme";
 import {
   Sparkles,
   Newspaper,
@@ -13,6 +14,9 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
+  Sun,
+  Moon,
+  Monitor,
   type LucideIcon,
 } from "lucide-react";
 
@@ -26,9 +30,38 @@ const NAV: { href: string; label: string; icon: LucideIcon }[] = [
 
 const STORAGE_KEY = "bas-studio-rail-expanded";
 
+const THEME_CYCLE: ThemeMode[] = ["system", "light", "dark"];
+const THEME_META: Record<ThemeMode, { label: string; icon: LucideIcon }> = {
+  system: { label: "System theme", icon: Monitor },
+  light: { label: "Light theme", icon: Sun },
+  dark: { label: "Dark theme", icon: Moon },
+};
+
 export default function IconRail() {
   const [expanded, setExpanded] = useState(false);
   const pathname = usePathname() || "/";
+  const [mode, setMode] = useState<ThemeMode>("system");
+
+  useEffect(() => {
+    setMode(readStoredMode());
+  }, []);
+
+  // In System mode, follow the device live (e.g. when it switches to dark at sunset).
+  useEffect(() => {
+    if (mode !== "system") return;
+    const mq = window.matchMedia("(prefers-color-scheme: light)");
+    const onChange = () => applyTheme("system");
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, [mode]);
+
+  function cycleTheme() {
+    const next = THEME_CYCLE[(THEME_CYCLE.indexOf(mode) + 1) % THEME_CYCLE.length];
+    setMode(next);
+    storeMode(next);
+    applyTheme(next);
+  }
+  const ThemeIcon = THEME_META[mode].icon;
 
   // Remember the choice between visits. Wrapped in try/catch because storage can be
   // blocked (private windows) and the rail must still work without it.
@@ -52,7 +85,7 @@ export default function IconRail() {
 
   return (
     <aside
-      className={`sticky top-0 h-screen shrink-0 bg-black border-r border-gray-900 flex flex-col py-3 transition-[width] duration-200 ${
+      className={`sticky top-0 h-screen shrink-0 bg-black border-r border-gray-800 flex flex-col py-3 transition-[width] duration-200 ${
         expanded ? "w-52 px-3" : "w-[68px] px-2.5"
       }`}
     >
@@ -84,7 +117,7 @@ export default function IconRail() {
                 expanded ? "px-3" : "justify-center"
               } ${
                 active
-                  ? "bg-bas-gold/15 text-bas-gold"
+                  ? "bg-bas-gold/15 text-gold-fg"
                   : "text-gray-400 hover:text-gray-50 hover:bg-gray-900"
               }`}
             >
@@ -98,7 +131,7 @@ export default function IconRail() {
 
       <div className="flex-1" />
 
-      <div className="flex flex-col gap-1 pt-3 border-t border-gray-900">
+      <div className="flex flex-col gap-1 pt-3 border-t border-gray-800">
         <Link
           href="/settings"
           aria-label="Settings"
@@ -107,7 +140,7 @@ export default function IconRail() {
             expanded ? "px-3" : "justify-center"
           } ${
             isActive("/settings")
-              ? "bg-bas-gold/15 text-bas-gold"
+              ? "bg-bas-gold/15 text-gold-fg"
               : "text-gray-400 hover:text-gray-50 hover:bg-gray-900"
           }`}
         >
@@ -115,6 +148,19 @@ export default function IconRail() {
           {expanded && <span className="whitespace-nowrap">Settings</span>}
           {!expanded && <Tooltip label="Settings" />}
         </Link>
+
+        <button
+          type="button"
+          onClick={cycleTheme}
+          aria-label={`${THEME_META[mode].label}. Click to change.`}
+          className={`group relative flex items-center gap-3 h-10 rounded-xl text-sm text-gray-500 hover:text-gray-50 hover:bg-gray-900 transition-colors focus-ring ${
+            expanded ? "px-3" : "justify-center"
+          }`}
+        >
+          <ThemeIcon size={18} strokeWidth={1.75} className="shrink-0" />
+          {expanded && <span className="whitespace-nowrap">{THEME_META[mode].label}</span>}
+          {!expanded && <Tooltip label={THEME_META[mode].label} />}
+        </button>
 
         {/* The collapse control lives at the bottom, away from the logo, like most
             app shells — and it swaps icon so it always shows what a click will do. */}

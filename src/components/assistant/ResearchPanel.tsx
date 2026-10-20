@@ -45,7 +45,7 @@ export default function ResearchPanel() {
         <button
           type="submit"
           disabled={loading}
-          className="bg-bas-gold hover:bg-bas-gold-hover disabled:opacity-50 text-black font-semibold rounded-lg px-5 flex items-center gap-2 transition-colors shrink-0"
+          className="bg-bas-gold hover:bg-bas-gold-hover disabled:opacity-50 text-on-gold font-semibold rounded-lg px-5 flex items-center gap-2 transition-colors shrink-0"
         >
           {loading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
           Research

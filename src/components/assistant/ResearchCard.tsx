@@ -3,7 +3,7 @@ import type { ResearchResult } from "@/types";
 
 const badgeStyles: Record<string, string> = {
   yes: "bg-green-500/15 text-green-400 border-green-500/30",
-  maybe: "bg-bas-gold/15 text-bas-gold border-bas-gold/30",
+  maybe: "bg-bas-gold/15 text-gold-fg border-bas-gold/30",
   no: "bg-gray-700/30 text-gray-400 border-gray-700",
 };
 
@@ -50,7 +50,7 @@ export default function ResearchCard({ result }: { result: ResearchResult }) {
 
       {result.suggestedAngle && (
         <div className="bg-black/40 border border-bas-gold/20 rounded-lg p-3">
-          <p className="text-xs uppercase tracking-wide text-bas-gold mb-1">Suggested angle</p>
+          <p className="text-xs uppercase tracking-wide text-gold-fg mb-1">Suggested angle</p>
           <p className="text-sm text-gray-100">{result.suggestedAngle}</p>
         </div>
       )}
@@ -67,7 +67,7 @@ export default function ResearchCard({ result }: { result: ResearchResult }) {
                   href={s.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-gray-400 hover:text-bas-gold flex items-center gap-1"
+                  className="text-xs text-gray-400 hover:text-gold-fg flex items-center gap-1"
                 >
                   <ExternalLink size={11} className="shrink-0" />
                   <span className="truncate">{s.title || s.url}</span>

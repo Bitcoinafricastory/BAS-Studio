@@ -3,6 +3,7 @@ import { Montserrat, Poppins, Inter, Merriweather } from "next/font/google";
 import "./globals.css";
 import PasscodeGate from "@/components/ui/PasscodeGate";
 import IconRail from "@/components/ui/IconRail";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -26,7 +27,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${montserrat.variable} ${poppins.variable} ${inter.variable} ${merriweather.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${montserrat.variable} ${poppins.variable} ${inter.variable} ${merriweather.variable}`}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="font-sans min-h-screen bg-black text-gray-50">
         <PasscodeGate>
           <div className="flex min-h-screen">

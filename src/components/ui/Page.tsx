@@ -38,7 +38,7 @@ export function EmptyState({
 }) {
   return (
     <div className="card flex flex-col items-center px-6 py-14 text-center">
-      <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-bas-gold/10 text-bas-gold">
+      <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-bas-gold/10 text-gold-fg">
         <Icon size={20} />
       </div>
       <h2 className="text-sm font-semibold text-gray-100">{title}</h2>

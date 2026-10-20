@@ -41,7 +41,7 @@ export default function PasscodeGate({ children }: { children: React.ReactNode }
           onSubmit={submit}
           className="w-full max-w-sm bg-gray-900/50 border border-gray-800 rounded-xl p-8 flex flex-col gap-4"
         >
-          <div className="flex items-center gap-2 text-bas-gold mb-2">
+          <div className="flex items-center gap-2 text-gold-fg mb-2">
             <Lock size={20} />
             <span className="font-semibold tracking-wide">BAS Studio</span>
           </div>
@@ -56,7 +56,7 @@ export default function PasscodeGate({ children }: { children: React.ReactNode }
           {error && <p className="text-sm text-red-400">{error}</p>}
           <button
             type="submit"
-            className="bg-bas-gold hover:bg-bas-gold-hover text-black font-semibold rounded-lg py-2.5 transition-colors"
+            className="bg-bas-gold hover:bg-bas-gold-hover text-on-gold font-semibold rounded-lg py-2.5 transition-colors"
           >
             Enter
           </button>

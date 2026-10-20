@@ -124,7 +124,7 @@ export default function SettingsPage() {
             <div key={field.key} className="card flex flex-col gap-3 p-5">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-bas-gold/10 text-bas-gold">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-bas-gold/10 text-gold-fg">
                     <Icon size={15} />
                   </span>
                   <h2 className="text-sm font-semibold text-gray-100">{field.title}</h2>

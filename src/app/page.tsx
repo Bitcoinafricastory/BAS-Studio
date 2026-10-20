@@ -174,7 +174,8 @@ export default function HomePage() {
           />
 
           <div className="relative w-[220px] h-[106px] mb-12">
-            <Image src="/bas-logo-full.png" alt="Bitcoin Africa Story" fill className="object-contain" priority />
+            <Image src="/bas-logo-full.png" alt="Bitcoin Africa Story" fill className="logo-on-dark object-contain" priority />
+            <Image src="/bas-logo-full-light.png" alt="Bitcoin Africa Story" fill className="logo-on-light object-contain" priority />
           </div>
 
           <SearchBar
@@ -198,7 +199,7 @@ export default function HomePage() {
               <button
                 key={chip.label}
                 onClick={() => send(chip.prompt)}
-                className="text-sm px-4 py-2 rounded-full bg-gray-900/70 border border-gray-800 hover:border-bas-gold/40 hover:text-bas-gold text-gray-300 transition-all"
+                className="text-sm px-4 py-2 rounded-full bg-gray-900/70 border border-gray-800 hover:border-bas-gold/40 hover:text-gold-fg text-gray-300 transition-all"
               >
                 {chip.label}
               </button>
@@ -206,7 +207,7 @@ export default function HomePage() {
           </div>
 
           <p className="text-xs text-gray-600 mt-12">
-            Est. 2024 · <span className="text-bas-gold/90">Reporting from the ground</span>
+            Est. 2024 · <span className="text-gold-fg/90">Reporting from the ground</span>
           </p>
         </div>
 
@@ -222,7 +223,7 @@ export default function HomePage() {
             <button
               onClick={draftFromChat}
               disabled={draftingFromChat}
-              className="flex items-center gap-1.5 text-xs px-3.5 py-2 rounded-full bg-bas-gold hover:bg-bas-gold-hover disabled:opacity-50 text-black font-semibold transition-colors focus-ring"
+              className="flex items-center gap-1.5 text-xs px-3.5 py-2 rounded-full bg-bas-gold hover:bg-bas-gold-hover disabled:opacity-50 text-on-gold font-semibold transition-colors focus-ring"
             >
               {draftingFromChat ? <Loader2 size={12} className="animate-spin" /> : <PenSquare size={12} />}
               Draft this
@@ -352,7 +353,7 @@ function SearchBar({
           type="button"
           onClick={() => setDeepSearch((d: boolean) => !d)}
           className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full shrink-0 transition-colors ${
-            deepSearch ? "bg-bas-gold text-black font-medium" : "bg-gray-700/60 text-gray-300 hover:text-gray-100"
+            deepSearch ? "bg-bas-gold text-on-gold font-medium" : "bg-gray-700/60 text-gray-300 hover:text-gray-100"
           }`}
         >
           <Search size={13} /> Deep Search
@@ -387,7 +388,7 @@ function SearchBar({
         type="submit"
         disabled={loading || !input.trim()}
         aria-label="Send"
-        className="shrink-0 bg-bas-gold hover:bg-bas-gold-hover disabled:bg-gray-800 disabled:text-gray-600 text-black rounded-full p-2 transition-colors focus-ring"
+        className="shrink-0 bg-bas-gold hover:bg-bas-gold-hover disabled:bg-gray-800 disabled:text-gray-600 text-on-gold rounded-full p-2 transition-colors focus-ring"
       >
         {loading ? <Loader2 size={14} className="animate-spin" /> : <ArrowUp size={14} />}
       </button>
@@ -410,7 +411,7 @@ function ErrorNote({ message }: { message: string }) {
         {keyIssue && (
           <Link
             href="/settings"
-            className="inline-block mt-2 text-xs font-semibold text-bas-gold hover:text-bas-gold-hover"
+            className="inline-block mt-2 text-xs font-semibold text-gold-fg hover:text-gold-fg-hover"
           >
             Open Settings →
           </Link>

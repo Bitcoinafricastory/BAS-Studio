@@ -94,17 +94,17 @@ const lightStyles = `
 // unaffected.
 const darkStyles = `
 .bas-quill-dark .ql-toolbar {
-  background: #111113;
-  border-color: #27272a;
+  background: var(--q-toolbar-bg);
+  border-color: var(--q-border);
   border-top-left-radius: 0.5rem;
   border-top-right-radius: 0.5rem;
 }
 .bas-quill-dark .ql-container {
-  background: #0a0a0a;
-  border-color: #27272a;
+  background: var(--q-canvas);
+  border-color: var(--q-border);
   border-bottom-left-radius: 0.5rem;
   border-bottom-right-radius: 0.5rem;
-  color: #e5e7eb;
+  color: var(--q-text);
   font-size: 16px;
   min-height: 320px;
 }
@@ -112,30 +112,30 @@ const darkStyles = `
   min-height: 320px;
 }
 .bas-quill-dark .ql-editor.ql-blank::before {
-  color: #6b7280;
+  color: var(--q-placeholder);
   font-style: normal;
 }
-.bas-quill-dark .ql-editor a { color: #eab308; }
+.bas-quill-dark .ql-editor a { color: var(--q-accent); }
 .bas-quill-dark .ql-editor blockquote {
-  border-left-color: #eab308;
-  color: #d1d5db;
+  border-left-color: var(--q-accent);
+  color: var(--q-quote);
 }
 /* Toolbar icons */
-.bas-quill-dark .ql-toolbar .ql-stroke { stroke: #9ca3af; }
-.bas-quill-dark .ql-toolbar .ql-fill { fill: #9ca3af; }
-.bas-quill-dark .ql-toolbar .ql-picker { color: #9ca3af; }
+.bas-quill-dark .ql-toolbar .ql-stroke { stroke: var(--q-muted); }
+.bas-quill-dark .ql-toolbar .ql-fill { fill: var(--q-muted); }
+.bas-quill-dark .ql-toolbar .ql-picker { color: var(--q-muted); }
 .bas-quill-dark .ql-toolbar button:hover .ql-stroke,
-.bas-quill-dark .ql-toolbar button.ql-active .ql-stroke { stroke: #eab308; }
+.bas-quill-dark .ql-toolbar button.ql-active .ql-stroke { stroke: var(--q-accent); }
 .bas-quill-dark .ql-toolbar button:hover .ql-fill,
-.bas-quill-dark .ql-toolbar button.ql-active .ql-fill { fill: #eab308; }
+.bas-quill-dark .ql-toolbar button.ql-active .ql-fill { fill: var(--q-accent); }
 .bas-quill-dark .ql-toolbar .ql-picker-label:hover,
 .bas-quill-dark .ql-toolbar .ql-picker-item:hover,
-.bas-quill-dark .ql-toolbar .ql-picker-label.ql-active { color: #eab308; }
+.bas-quill-dark .ql-toolbar .ql-picker-label.ql-active { color: var(--q-accent); }
 /* Dropdown menus */
 .bas-quill-dark .ql-picker-options {
-  background: #18181b;
-  border-color: #27272a;
-  color: #e5e7eb;
+  background: var(--q-popup);
+  border-color: var(--q-border);
+  color: var(--q-text);
 }
 .bas-quill-dark .ql-toolbar .ql-picker-label { border-color: transparent; }
 `;

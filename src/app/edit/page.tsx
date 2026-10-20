@@ -185,7 +185,7 @@ export default function EditSendPage() {
     return (
       <Page width="max-w-md">
         <div className="mt-16 flex flex-col items-center gap-3 text-center">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-bas-gold/10 text-bas-gold">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-bas-gold/10 text-gold-fg">
             <CheckCircle2 size={28} />
           </span>
           <h1 className="text-xl font-semibold text-gray-50">Sent to your dashboard</h1>
@@ -238,7 +238,7 @@ export default function EditSendPage() {
               <button
                 onClick={handleImprove}
                 disabled={improving}
-                className="flex items-center gap-1.5 bg-bas-gold hover:bg-bas-gold-hover disabled:opacity-60 text-black text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg transition-colors"
+                className="flex items-center gap-1.5 bg-bas-gold hover:bg-bas-gold-hover disabled:opacity-60 text-on-gold text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg transition-colors"
               >
                 {improving ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
                 Improve
@@ -369,7 +369,7 @@ export default function EditSendPage() {
           ) : (
             <ul className="text-xs text-gray-300 list-disc list-inside space-y-1">
               {styleIssues.map((s, i) => (
-                <li key={i} className={s.level === "error" ? "text-bas-gold" : undefined}>
+                <li key={i} className={s.level === "error" ? "text-gold-fg" : undefined}>
                   {s.message}
                 </li>
               ))}
@@ -408,7 +408,7 @@ export default function EditSendPage() {
                 <li key={i} className="text-xs text-gray-400 flex items-center gap-1">
                   <ExternalLink size={10} className="shrink-0" />
                   {l.url ? (
-                    <a href={l.url} target="_blank" rel="noreferrer" className="hover:text-bas-gold">
+                    <a href={l.url} target="_blank" rel="noreferrer" className="hover:text-gold-fg">
                       {l.title}
                     </a>
                   ) : (
@@ -422,7 +422,7 @@ export default function EditSendPage() {
 
         {form.claimsToVerify?.length > 0 && (
           <div className="bg-black/40 border border-bas-gold/20 rounded-xl p-4 flex flex-col gap-2">
-            <h3 className="text-sm font-semibold text-bas-gold flex items-center gap-1.5">
+            <h3 className="text-sm font-semibold text-gold-fg flex items-center gap-1.5">
               <AlertTriangle size={14} /> Claims to verify
             </h3>
             <ul className="text-xs text-gray-300 list-disc list-inside space-y-1">

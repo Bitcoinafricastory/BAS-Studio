@@ -129,7 +129,7 @@ export default function SourcesPage() {
           {sources.map((source) => (
             <li key={source.id} className="card flex items-center justify-between gap-3 px-4 py-3">
               <div className="flex min-w-0 items-center gap-3">
-                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${source.active ? "bg-bas-gold/10 text-bas-gold" : "bg-gray-800/60 text-gray-500"}`}>
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${source.active ? "bg-bas-gold/10 text-gold-fg" : "bg-gray-800/60 text-gray-500"}`}>
                   {source.type === "rss" ? <Rss size={15} /> : <Newspaper size={15} />}
                 </span>
                 <div className="min-w-0">

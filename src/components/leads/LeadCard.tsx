@@ -30,14 +30,14 @@ export default function LeadCard({ lead }: { lead: Lead }) {
           )}
         </div>
         {lead.unverified && (
-          <span className="shrink-0 rounded-full border border-bas-gold/30 bg-bas-gold/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-bas-gold">
+          <span className="shrink-0 rounded-full border border-bas-gold/30 bg-bas-gold/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gold-fg">
             Unverified
           </span>
         )}
       </div>
 
       <a href={lead.url} target="_blank" rel="noopener noreferrer" className="focus-ring rounded">
-        <h3 className="font-medium leading-snug text-gray-50 transition-colors group-hover:text-bas-gold">{lead.title}</h3>
+        <h3 className="font-medium leading-snug text-gray-50 transition-colors group-hover:text-gold-fg">{lead.title}</h3>
       </a>
       {lead.summary && <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-gray-400">{lead.summary}</p>}
 
