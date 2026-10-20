@@ -1,84 +1,149 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Image as ImageIcon, SquarePen, FileSearch, PanelLeft, Settings } from "lucide-react";
+import {
+  Sparkles,
+  Newspaper,
+  SquarePen,
+  Rss,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Settings,
+  type LucideIcon,
+} from "lucide-react";
 
-const RAIL_LINKS = [
-  { href: "/leads", label: "Leads", icon: ImageIcon },
+const NAV: { href: string; label: string; icon: LucideIcon }[] = [
+  { href: "/", label: "Home", icon: Sparkles },
+  { href: "/leads", label: "Leads", icon: Newspaper },
   { href: "/draft", label: "New Draft", icon: SquarePen },
-  { href: "/sources", label: "Sources", icon: FileSearch },
+  { href: "/sources", label: "Sources", icon: Rss },
 ];
+
+const STORAGE_KEY = "bas-studio-rail-expanded";
 
 export default function IconRail() {
   const [expanded, setExpanded] = useState(false);
-  const pathname = usePathname();
+  const pathname = usePathname() || "/";
+
+  // Remember the choice between visits. Wrapped in try/catch because storage can be
+  // blocked (private windows) and the rail must still work without it.
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(STORAGE_KEY) === "1") setExpanded(true);
+    } catch {}
+  }, []);
+
+  function toggle() {
+    setExpanded((e) => {
+      const next = !e;
+      try {
+        localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+      } catch {}
+      return next;
+    });
+  }
+
+  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
   return (
     <aside
-      className={`shrink-0 bg-black border-r border-gray-800 flex flex-col transition-all ${
-        expanded ? "w-48" : "w-16"
+      className={`sticky top-0 h-screen shrink-0 bg-black border-r border-gray-900 flex flex-col py-3 transition-[width] duration-200 ${
+        expanded ? "w-52 px-3" : "w-[68px] px-2.5"
       }`}
     >
-      <div className="flex items-center justify-between px-3 py-4 border-b border-gray-900">
-        <Link href="/" className="flex items-center gap-2 shrink-0">
-          <div className="w-8 h-8 relative shrink-0">
-            <Image src="/bas-logo-icon.png" alt="Bitcoin Africa Story" fill className="object-contain" priority />
-          </div>
-          {expanded && <span className="text-xs font-semibold text-gray-100 leading-tight">BAS Studio</span>}
-        </Link>
-        {/* The lone non-functional search icon that lived here before is gone — a
-            clickable-looking element that did nothing was part of what made this feel
-            unfinished. The toggle is the only control that actually belongs in the header. */}
-        <button
-          aria-label="Toggle sidebar"
-          onClick={() => setExpanded((e) => !e)}
-          className="text-gray-500 hover:text-gray-200 transition-colors p-1 shrink-0"
-        >
-          <PanelLeft size={16} />
-        </button>
-      </div>
+      {/* Brand: logo always has its own row, so nothing can be squeezed or clipped
+          when the rail is collapsed. */}
+      <Link
+        href="/"
+        aria-label="Bitcoin Africa Story, home"
+        className={`flex items-center gap-3 rounded-xl h-11 ${expanded ? "px-2" : "justify-center"} focus-ring`}
+      >
+        <span className="relative w-7 h-7 shrink-0">
+          <Image src="/bas-logo-icon.png" alt="" fill sizes="28px" className="object-contain" priority />
+        </span>
+        {expanded && (
+          <span className="text-sm font-semibold tracking-tight text-gray-50 whitespace-nowrap">BAS Studio</span>
+        )}
+      </Link>
 
-      <nav className="flex flex-col gap-1 px-2 py-3">
-        {RAIL_LINKS.map(({ href, label, icon: Icon }) => {
-          const active = pathname?.startsWith(href);
+      <nav className="flex flex-col gap-1 mt-5" aria-label="Main">
+        {NAV.map(({ href, label, icon: Icon }) => {
+          const active = isActive(href);
           return (
             <Link
               key={href}
               href={href}
-              title={label}
-              className={`relative flex items-center gap-3 px-2.5 py-2 rounded-lg text-sm transition-colors ${
-                active ? "bg-bas-gold/15 text-bas-gold" : "text-gray-400 hover:text-gray-100 hover:bg-gray-900/50"
+              aria-label={label}
+              aria-current={active ? "page" : undefined}
+              className={`group relative flex items-center gap-3 h-10 rounded-xl text-sm font-medium transition-colors focus-ring ${
+                expanded ? "px-3" : "justify-center"
+              } ${
+                active
+                  ? "bg-bas-gold/15 text-bas-gold"
+                  : "text-gray-400 hover:text-gray-50 hover:bg-gray-900"
               }`}
             >
-              {active && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 w-1 h-4 rounded-full bg-bas-gold" />
-              )}
-              <Icon size={18} className="shrink-0" />
+              <Icon size={18} strokeWidth={active ? 2.25 : 1.75} className="shrink-0" />
               {expanded && <span className="whitespace-nowrap">{label}</span>}
+              {!expanded && <Tooltip label={label} />}
             </Link>
           );
         })}
       </nav>
 
-      {/* Spacer pushes Settings to the bottom intentionally, not as leftover empty space —
-          the visible border above it now makes that grouping clear instead of ambiguous. */}
       <div className="flex-1" />
 
-      <Link
-        href="/settings"
-        title="Settings"
-        className={`flex items-center gap-3 px-2.5 py-2 mx-2 mb-3 rounded-lg text-sm transition-colors border-t border-gray-900 pt-3 ${
-          pathname?.startsWith("/settings")
-            ? "bg-bas-gold/15 text-bas-gold"
-            : "text-gray-500 hover:text-gray-100 hover:bg-gray-900/50"
-        }`}
-      >
-        <Settings size={18} className="shrink-0" />
-        {expanded && <span className="whitespace-nowrap">Settings</span>}
-      </Link>
+      <div className="flex flex-col gap-1 pt-3 border-t border-gray-900">
+        <Link
+          href="/settings"
+          aria-label="Settings"
+          aria-current={isActive("/settings") ? "page" : undefined}
+          className={`group relative flex items-center gap-3 h-10 rounded-xl text-sm font-medium transition-colors focus-ring ${
+            expanded ? "px-3" : "justify-center"
+          } ${
+            isActive("/settings")
+              ? "bg-bas-gold/15 text-bas-gold"
+              : "text-gray-400 hover:text-gray-50 hover:bg-gray-900"
+          }`}
+        >
+          <Settings size={18} strokeWidth={1.75} className="shrink-0" />
+          {expanded && <span className="whitespace-nowrap">Settings</span>}
+          {!expanded && <Tooltip label="Settings" />}
+        </Link>
+
+        {/* The collapse control lives at the bottom, away from the logo, like most
+            app shells — and it swaps icon so it always shows what a click will do. */}
+        <button
+          type="button"
+          onClick={toggle}
+          aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
+          className={`group relative flex items-center gap-3 h-10 rounded-xl text-sm text-gray-500 hover:text-gray-50 hover:bg-gray-900 transition-colors focus-ring ${
+            expanded ? "px-3" : "justify-center"
+          }`}
+        >
+          {expanded ? (
+            <PanelLeftClose size={18} strokeWidth={1.75} className="shrink-0" />
+          ) : (
+            <PanelLeftOpen size={18} strokeWidth={1.75} className="shrink-0" />
+          )}
+          {expanded && <span className="whitespace-nowrap">Collapse</span>}
+          {!expanded && <Tooltip label="Expand" />}
+        </button>
+      </div>
     </aside>
+  );
+}
+
+function Tooltip({ label }: { label: string }) {
+  return (
+    <span
+      role="tooltip"
+      className="pointer-events-none absolute left-full ml-3 z-50 whitespace-nowrap rounded-lg bg-gray-900 border border-gray-800 px-2.5 py-1.5 text-xs font-medium text-gray-100 opacity-0 translate-x-[-4px] shadow-lg shadow-black/50 transition-all group-hover:opacity-100 group-hover:translate-x-0 group-focus-visible:opacity-100 group-focus-visible:translate-x-0"
+    >
+      {label}
+    </span>
   );
 }

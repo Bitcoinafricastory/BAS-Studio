@@ -12,3 +12,24 @@ body {
 }
 
 /* Quill editor overrides live in components/editor once StoryEditor is ported in */
+
+/* Consistent, on-brand keyboard focus instead of the browser's default blue box. */
+.focus-ring:focus-visible {
+  outline: 2px solid rgba(234, 179, 8, 0.7);
+  outline-offset: 2px;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
+}
+
+::selection {
+  background: rgba(234, 179, 8, 0.3);
+}
+
+/* Slim dark scrollbars so long chats and editors don't show a bright system bar. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #27272a transparent;
+}

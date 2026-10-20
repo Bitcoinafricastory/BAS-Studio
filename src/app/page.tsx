@@ -3,7 +3,8 @@
 import Image from "next/image";
 import { useState, useRef, useEffect, useCallback, Dispatch, SetStateAction } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Mic, MicOff, ScanLine, Search, Loader2, ArrowUp, PenSquare } from "lucide-react";
+import Link from "next/link";
+import { Plus, Mic, MicOff, ScanLine, Search, Loader2, ArrowUp, PenSquare, SquarePlus, AlertCircle } from "lucide-react";
 import ResearchCard from "@/components/assistant/ResearchCard";
 import type { ResearchResult } from "@/types";
 
@@ -11,6 +12,7 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   research?: ResearchResult;
+  error?: boolean;
 }
 
 const QUICK_CHIPS = [
@@ -67,7 +69,7 @@ export default function HomePage() {
           setMessages((m) => [...m, { role: "assistant", content: data.text }]);
         }
       } catch (err: any) {
-        setMessages((m) => [...m, { role: "assistant", content: `Something went wrong: ${err.message}` }]);
+        setMessages((m) => [...m, { role: "assistant", content: err.message || "Something went wrong", error: true }]);
       } finally {
         setLoading(false);
       }
@@ -129,17 +131,28 @@ export default function HomePage() {
       localStorage.setItem("bas-studio-pending-draft", JSON.stringify(data));
       router.push("/edit");
     } catch (err: any) {
-      setMessages((m) => [...m, { role: "assistant", content: `Couldn't generate a draft: ${err.message}` }]);
+      setMessages((m) => [
+        ...m,
+        { role: "assistant", content: `Couldn't generate a draft: ${err.message}`, error: true },
+      ]);
     } finally {
       setDraftingFromChat(false);
     }
   }
 
   const lastAssistantIsText =
-    messages.length > 0 && messages[messages.length - 1].role === "assistant" && !messages[messages.length - 1].research;
+    messages.length > 0 &&
+    messages[messages.length - 1].role === "assistant" &&
+    !messages[messages.length - 1].research &&
+    !messages[messages.length - 1].error;
+
+  function newChat() {
+    setMessages([]);
+    setInput("");
+  }
 
   return (
-    <div className="min-h-screen flex flex-col bg-black">
+    <div className="h-screen flex flex-col bg-black">
       {!started ? (
         <div className="flex-1 flex flex-col items-center justify-center px-4 relative overflow-hidden">
           {/* Soft radial glow behind the mark — the one bit of visual flourish */}
@@ -187,11 +200,17 @@ export default function HomePage() {
 
       ) : (
         <>
-          <div className="flex items-center justify-end px-4 sm:px-8 pt-4">
+          <div className="flex items-center justify-between px-4 sm:px-8 pt-4">
+            <button
+              onClick={newChat}
+              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full text-gray-400 hover:text-gray-50 hover:bg-gray-900 transition-colors focus-ring"
+            >
+              <SquarePlus size={14} /> New chat
+            </button>
             <button
               onClick={draftFromChat}
               disabled={draftingFromChat}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-bas-gold hover:bg-bas-gold-hover disabled:opacity-50 text-black font-medium transition-colors"
+              className="flex items-center gap-1.5 text-xs px-3.5 py-2 rounded-full bg-bas-gold hover:bg-bas-gold-hover disabled:opacity-50 text-black font-semibold transition-colors focus-ring"
             >
               {draftingFromChat ? <Loader2 size={12} className="animate-spin" /> : <PenSquare size={12} />}
               Draft this
@@ -210,6 +229,8 @@ export default function HomePage() {
                 >
                   {m.content}
                 </div>
+              ) : m.error ? (
+                <ErrorNote key={i} message={m.content} />
               ) : (
                 <div key={i} className="max-w-[85%] self-start text-sm text-gray-200 leading-relaxed whitespace-pre-wrap">
                   {m.content}
@@ -293,7 +314,7 @@ function SearchBar({
   return (
     <form
       onSubmit={onSubmit}
-      className={`flex items-center gap-2 bg-gray-900/70 border border-gray-800 rounded-full pl-4 pr-2 py-2 shadow-lg shadow-black/40 focus-within:border-bas-gold/30 transition-colors ${
+      className={`relative flex items-center gap-2 bg-gray-900/70 border border-gray-800 rounded-full pl-4 pr-2 py-2 shadow-lg shadow-black/40 focus-within:border-bas-gold/40 focus-within:shadow-bas-gold/5 transition-all ${
         empty ? "w-full max-w-xl" : "w-full"
       }`}
     >
@@ -301,13 +322,16 @@ function SearchBar({
       <input
         value={input}
         onChange={(e) => setInput(e.target.value)}
-        placeholder={empty ? undefined : "Ask anything Bitcoin in Africa"}
+        placeholder="Ask anything Bitcoin in Africa"
+        aria-label="Ask anything Bitcoin in Africa"
+        autoFocus={empty}
         className="flex-1 bg-transparent text-sm text-gray-100 placeholder-gray-500 focus:outline-none min-w-0"
       />
       <button
         type="button"
         onClick={() => setProvider(provider === "claude" ? "grok" : "claude")}
-        className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full shrink-0 bg-gray-700/60 text-gray-300 hover:text-gray-100 transition-colors"
+        title="Switch between Claude and Grok"
+        className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full shrink-0 bg-gray-700/60 text-gray-300 hover:text-gray-100 transition-colors focus-ring"
       >
         {provider === "claude" ? "Claude" : "Grok"}
       </button>
@@ -319,7 +343,7 @@ function SearchBar({
             deepSearch ? "bg-bas-gold text-black font-medium" : "bg-gray-700/60 text-gray-300 hover:text-gray-100"
           }`}
         >
-          <Search size={13} /> {empty ? "AI Mode" : "Deep Search"}
+          <Search size={13} /> Deep Search
         </button>
       ) : (
         <span
@@ -347,19 +371,39 @@ function SearchBar({
       >
         <ScanLine size={16} />
       </button>
-      {!empty && (
-        <button
-          type="submit"
-          disabled={loading || !input.trim()}
-          aria-label="Send"
-          className="shrink-0 bg-bas-gold hover:bg-bas-gold-hover disabled:opacity-40 text-black rounded-full p-2 transition-colors"
-        >
-          {loading ? <Loader2 size={14} className="animate-spin" /> : <ArrowUp size={14} />}
-        </button>
-      )}
+      <button
+        type="submit"
+        disabled={loading || !input.trim()}
+        aria-label="Send"
+        className="shrink-0 bg-bas-gold hover:bg-bas-gold-hover disabled:bg-gray-800 disabled:text-gray-600 text-black rounded-full p-2 transition-colors focus-ring"
+      >
+        {loading ? <Loader2 size={14} className="animate-spin" /> : <ArrowUp size={14} />}
+      </button>
       {!speechSupported && (
         <span className="text-[10px] text-gray-600 absolute -bottom-5">Dictation needs Chrome</span>
       )}
     </form>
+  );
+}
+
+// Errors get their own treatment instead of reading like an AI answer. Missing-key errors
+// get a direct link to Settings, since that's the one thing the editor can do about them.
+function ErrorNote({ message }: { message: string }) {
+  const keyIssue = /api key|settings/i.test(message);
+  return (
+    <div className="max-w-[85%] self-start flex gap-3 rounded-2xl border border-red-900/50 bg-red-950/20 px-4 py-3">
+      <AlertCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
+      <div className="text-sm text-gray-300 leading-relaxed">
+        <p>{message}</p>
+        {keyIssue && (
+          <Link
+            href="/settings"
+            className="inline-block mt-2 text-xs font-semibold text-bas-gold hover:text-bas-gold-hover"
+          >
+            Open Settings →
+          </Link>
+        )}
+      </div>
+    </div>
   );
 }
