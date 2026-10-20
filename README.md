@@ -15,6 +15,18 @@ Built so far, real and working:
 
 BAS Studio is functionally complete. Every screen does what it says — nothing here is a mock or placeholder.
 
+### BAS voice: how every feature writes like us
+
+All of BAS Studio's writing follows one shared style guide in `src/lib/voice/`, built from the edits made on real BAS articles, so the tool doesn't have to be taught our style again:
+
+- `rules.ts`: the voice, the 12 slop patterns and banned words, the accuracy and privacy rules, article structure (hook, intro, read-through line, descriptive H2s, Sources, no tables, bold project names), heading rules, and title and SEO limits.
+- `exemplars.ts`: approved ledes, headings and paragraphs from the CBAF, Susan Githaiga, Btrust and Mauritius articles, plus the editor's past corrections and the rule behind each. Add new approved material here and every prompt picks it up.
+- `prompts.ts`: builds the system prompts for New Draft, Improve, the Home assistant, research and Grok from those rules.
+- `lint.ts`: the BAS style check. It runs on generated drafts (with one automatic fix pass for slop, dashes, tables and contrast framing) and live in the Edit screen's "BAS style check" card.
+- `archive.ts`: loads published BAS articles so drafts backlink real BAS stories. Any link a draft adds that isn't in your source material or the archive is removed and flagged under Claims to verify.
+
+Distribute uses the same banned-word list and checks, so articles and posts stay consistent.
+
 ### Important compatibility fix
 
 Your actual `news` schema (checked directly against `ArticleEditor.jsx` in the site repo) uses a `status` field (`draft` / `review` / `scheduled` / `published` / `archived`), **not** a `published: true/false` boolean like the original spec assumed. BAS Studio is built against the real schema — drafts land with `status: "draft"` and will show up correctly in your existing dashboard.

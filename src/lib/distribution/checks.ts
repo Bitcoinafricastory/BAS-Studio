@@ -1,5 +1,5 @@
 import { xLength, plainLength } from "./count";
-import { BANNED_WORDS, BANNED_PHRASES } from "./prompts";
+import { findBannedWords, findBannedPhrases, hasContrastFraming } from "../voice/lint";
 import { HANDLE_REGISTRY, BAS_X_HANDLE } from "./registry";
 import type { ArticleRecord, AuthorRecord, CheckResult, FactSheet, OutputId } from "./types";
 
@@ -98,15 +98,16 @@ export function runChecks(text: string, ctx: Ctx): CheckResult[] {
   if (outputId === "x_archive" && hasUrl) out.push(err("required", "Archive posts are self-contained; the link goes in the first comment."));
 
   // ---- Banned patterns
-  const bannedFound = BANNED_WORDS.filter((w) => new RegExp(`\\b${w.replace(/[-]/g, "[- ]")}`, "i").test(text));
+  // Shared with the article checks (src/lib/voice). Quoted speech is exempt, since quotes stay exact.
+  const bannedFound = findBannedWords(text);
   if (bannedFound.length) out.push(err("banned", `Banned wording: ${bannedFound.join(", ")}.`));
-  const phrasesFound = BANNED_PHRASES.filter((p) => lower.includes(p));
+  const phrasesFound = findBannedPhrases(text);
   if (phrasesFound.length) out.push(err("banned", `Banned phrase: ${phrasesFound.join(", ")}.`));
   if (text.includes("—")) out.push(err("banned", "Contains an em dash. Use a colon or a full stop."));
   if (isX(outputId) && /(^|\s)#\w+/.test(text)) out.push(err("banned", "Hashtags are not used on X."));
   const emojis = (text.match(/\p{Extended_Pictographic}/gu) || []).filter((e) => e !== "👇");
   if (emojis.length) out.push(err("banned", `Only 👇 is allowed as an emoji. Found: ${Array.from(new Set(emojis)).join(" ")}`));
-  if (/\b(it'?s|it is) not\b[^.\n]{0,80}[,;]\s*(it'?s|it is)\b/i.test(text) || /\bNo (one|government|company|bank)\b[^.\n]{0,60}\.\s+[A-Z]/.test(text))
+  if (hasContrastFraming(text) || /\bNo (one|government|company|bank)\b[^.\n]{0,60}\.\s+[A-Z]/.test(text))
     out.push(warn("banned", 'Looks like contrast framing ("It\'s not X, it\'s Y"). Rewrite it plainly.'));
 
   // ---- Handles

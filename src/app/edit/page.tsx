@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { CATEGORIES } from "@/lib/constants";
 import { slugify } from "@/lib/slugify";
 import type { Draft } from "@/types";
-import { Loader2, Send, Sparkles, CheckCircle2, ExternalLink, Users, Link2, AlertTriangle, FileEdit } from "lucide-react";
+import { Loader2, Send, Sparkles, CheckCircle2, ExternalLink, Users, Link2, AlertTriangle, FileEdit, ShieldCheck } from "lucide-react";
+import { lintDraft } from "@/lib/voice";
 import Link from "next/link";
 import { Page, EmptyState, ErrorBanner } from "@/components/ui/Page";
 import DictationButton from "@/components/editor/DictationButton";
@@ -29,6 +30,23 @@ export default function EditSendPage() {
 
   const editorRef = useRef<any>(null);
   const editorWrapperRef = useRef<HTMLDivElement>(null);
+
+  // Live BAS style check: the same rules New Draft and Distribute use, run as you edit.
+  const deferredForm = useDeferredValue(form);
+  const styleIssues = useMemo(
+    () =>
+      deferredForm
+        ? lintDraft({
+            title: deferredForm.title,
+            content: deferredForm.content,
+            excerpt: deferredForm.excerpt,
+            seoTitle: deferredForm.seoTitle,
+            metaDescription: deferredForm.metaDescription,
+            focusKeywords: deferredForm.focusKeywords,
+          })
+        : [],
+    [deferredForm]
+  );
 
   useEffect(() => {
     try {
@@ -342,6 +360,23 @@ export default function EditSendPage() {
           />
         </div>
 
+        <div className="card p-4 flex flex-col gap-2">
+          <h3 className="text-sm font-semibold text-gray-200 flex items-center gap-1.5">
+            <ShieldCheck size={14} /> BAS style check
+          </h3>
+          {styleIssues.length === 0 ? (
+            <p className="text-xs text-gray-500">No style issues found.</p>
+          ) : (
+            <ul className="text-xs text-gray-300 list-disc list-inside space-y-1">
+              {styleIssues.map((s, i) => (
+                <li key={i} className={s.level === "error" ? "text-bas-gold" : undefined}>
+                  {s.message}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
         {form.suggestedEntities?.length > 0 && (
           <div className="card p-4 flex flex-col gap-2">
             <h3 className="text-sm font-semibold text-gray-200 flex items-center gap-1.5">
@@ -371,7 +406,14 @@ export default function EditSendPage() {
             <ul className="flex flex-col gap-1">
               {form.suggestedInternalLinks.map((l, i) => (
                 <li key={i} className="text-xs text-gray-400 flex items-center gap-1">
-                  <ExternalLink size={10} className="shrink-0" /> {l.title}
+                  <ExternalLink size={10} className="shrink-0" />
+                  {l.url ? (
+                    <a href={l.url} target="_blank" rel="noreferrer" className="hover:text-bas-gold">
+                      {l.title}
+                    </a>
+                  ) : (
+                    l.title
+                  )}
                 </li>
               ))}
             </ul>

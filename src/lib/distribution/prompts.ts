@@ -1,4 +1,10 @@
 import { HANDLE_REGISTRY } from "./registry";
+import { BANNED_WORD_PATTERNS, BANNED_PHRASES as VOICE_BANNED_PHRASES } from "../voice/rules";
+
+// The banned lists live in the shared BAS voice (src/lib/voice/rules.ts), so articles and
+// posts are held to the same list. Defined before SYSTEM_PROMPT, which interpolates them.
+export const BANNED_WORDS = BANNED_WORD_PATTERNS.map((b) => b.word);
+export const BANNED_PHRASES = VOICE_BANNED_PHRASES;
 
 // The generator's system prompt, verbatim from the BAS Distribution spec.
 export const SYSTEM_PROMPT = `You write social distribution posts for Bitcoin Africa Story (BAS), a news site covering Bitcoin adoption across Africa (bitcoinafricastory.com, @btcafricastory on X).
@@ -30,7 +36,7 @@ VOICE
 
 NEVER USE
 - Permission language, throat-clearing, flourishes or performed candor.
-- These words: unlock, leverage, delve, landscape, game-changer, revolutionize, empower, robust, seamless, journey, tapestry, foster, harness, elevate, testament, beacon, paving the way.
+- These words: ${BANNED_WORDS.join(", ")}.
 - "It's not X, it's Y" or "No one did X. One person did Y."
 - Signposting closers such as "In conclusion" or "The takeaway?"
 - Three-item lists added for rhythm.
@@ -67,42 +73,3 @@ Return ONLY a JSON array of short strings, one per unsupported claim. Return [] 
 export function registryText(): string {
   return HANDLE_REGISTRY.map((r) => `${r.name}: @${r.handle} (${r.who})`).join("\n");
 }
-
-// Banned vocabulary for the check pass (the spec's AI-vocabulary list plus the stock phrases).
-export const BANNED_WORDS = [
-  "unlock",
-  "leverage",
-  "delve",
-  "landscape",
-  "game-changer",
-  "game changer",
-  "revolutionize",
-  "empower",
-  "robust",
-  "seamless",
-  "journey",
-  "tapestry",
-  "foster",
-  "harness",
-  "elevate",
-  "testament",
-  "beacon",
-  "paving the way",
-];
-
-export const BANNED_PHRASES = [
-  "let's dive in",
-  "here's the thing",
-  "you might be wondering",
-  "in today's fast-moving world",
-  "it's worth noting that",
-  "honestly,",
-  "to be frank",
-  "let's be real",
-  "in terms of",
-  "when it comes to",
-  "at the end of the day",
-  "in conclusion",
-  "the takeaway?",
-  "here's why that matters",
-];

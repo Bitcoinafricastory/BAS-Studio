@@ -55,6 +55,7 @@ export interface Draft {
   suggestedEntities: string[];
   suggestedInternalLinks: { title: string; url: string }[];
   claimsToVerify: string[];
+  styleNotes?: string[]; // BAS style check results at generation time; BAS Studio only, never sent to the site
   createdAt: string;
   updatedAt: string;
   sourceMaterial: {

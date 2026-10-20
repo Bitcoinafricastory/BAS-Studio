@@ -20,8 +20,8 @@ export async function POST(req: NextRequest) {
     }
 
     const db = getAdminDb();
-    // sourceMaterial is BAS Studio-only bookkeeping — not part of the site's news schema.
-    const { sourceMaterial, id, ...articleFields } = draft;
+    // sourceMaterial and styleNotes are BAS Studio-only bookkeeping, not part of the site's news schema.
+    const { sourceMaterial, styleNotes, id, ...articleFields } = draft;
 
     const docRef = await db.collection("news").add({
       ...articleFields,

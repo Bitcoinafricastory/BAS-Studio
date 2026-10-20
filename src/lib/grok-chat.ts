@@ -1,4 +1,5 @@
 import { getGrok, extractGrokText, DEFAULT_GROK_MODEL } from "./grok";
+import { grokStyleBlock } from "./voice";
 
 /**
  * Plain conversational Grok, with X and web search always on — that live-data access is
@@ -10,7 +11,12 @@ export async function grokChat(
   history: { role: string; content: string }[] = []
 ): Promise<string> {
   const client = await getGrok();
-  const input = [...history.map((m) => ({ role: m.role, content: m.content })), { role: "user", content: message }];
+  // The system message carries the BAS voice, so copy Grok drafts already follows it.
+  const input = [
+    { role: "system", content: grokStyleBlock() },
+    ...history.map((m) => ({ role: m.role, content: m.content })),
+    { role: "user", content: message },
+  ];
 
   const response = await (client as any).responses.create({
     model: DEFAULT_GROK_MODEL,

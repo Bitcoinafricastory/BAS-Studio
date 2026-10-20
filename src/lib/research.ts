@@ -1,10 +1,14 @@
 import { getAnthropic, DEFAULT_MODEL } from "./anthropic";
+import { researchStyleBlock } from "./voice";
+import { getBasArchive, archiveBlock } from "./voice/archive";
 import type { ResearchResult } from "@/types";
 
 type Depth = "quick" | "deep";
 
-const SYSTEM_PROMPT = (depth: Depth) =>
+const SYSTEM_PROMPT = (depth: Depth, archive: string) =>
   `
+${researchStyleBlock(archive)}
+
 You are a research assistant for Bitcoin Africa Story, an independent Bitcoin/crypto news site covering Africa.
 Given a name (person, project, company, protocol) or topic, use web search to find current, specific
 information about it — especially anything connecting it to Bitcoin, crypto, or Africa.
@@ -22,7 +26,7 @@ outside the tags. Structure exactly:
 {
   "overview": "2-3 sentences: what/who this is",
   "recentActivity": "What's happened recently, with dates where known",
-  "existingCoverage": "What's already been written about this elsewhere; assume Bitcoin Africa Story has not covered it before unless search results suggest otherwise",
+  "existingCoverage": "What's already been written about this elsewhere, and any BAS stories on it from the archive above, with their URLs",
   "writeworthy": "yes" | "maybe" | "no",
   "recommendation": "1-2 sentences on whether and why this is worth an article for a Bitcoin-Africa audience",
   "suggestedAngle": "A specific, concrete story angle if writeworthy is yes or maybe; empty string if no",
@@ -32,11 +36,12 @@ outside the tags. Structure exactly:
 
 export async function runResearch(query: string, depth: Depth = "quick"): Promise<ResearchResult> {
   const client = await getAnthropic();
+  const archive = await getBasArchive(150);
 
   const response = await client.messages.create({
     model: DEFAULT_MODEL,
     max_tokens: depth === "deep" ? 4000 : 2000,
-    system: SYSTEM_PROMPT(depth),
+    system: SYSTEM_PROMPT(depth, archiveBlock(archive)),
     messages: [{ role: "user", content: `Research: ${query}` }],
     tools: [{ type: "web_search_20250305", name: "web_search" } as any],
   });

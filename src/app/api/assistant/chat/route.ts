@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAnthropic, DEFAULT_MODEL } from "@/lib/anthropic";
 import { runResearch } from "@/lib/research";
 import { grokChat } from "@/lib/grok-chat";
+import { assistantStyleBlock } from "@/lib/voice";
 
 // Every route here reads request-time secrets (Firebase, Anthropic, xAI) or
 // request data — never build-time static content. Without this, Next.js
@@ -62,6 +63,8 @@ export async function POST(req: NextRequest) {
     const system = `You are the BAS Studio assistant for Bitcoin Africa Story, an independent Bitcoin/Africa news site.
 You can see the writer's currently open draft below for context. You must NEVER edit it directly — only
 suggest changes in your reply text, which the writer will paste in themselves if they want them.
+
+${assistantStyleBlock()}
 
 ${
   draftContext

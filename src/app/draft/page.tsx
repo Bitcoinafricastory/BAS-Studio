@@ -257,6 +257,16 @@ export default function NewDraftPage() {
               </ul>
             </div>
           )}
+          {draft.styleNotes && draft.styleNotes.length > 0 && (
+            <div>
+              <p className="text-xs uppercase tracking-wide text-gray-400 mb-1">BAS style check</p>
+              <ul className="text-sm text-gray-400 list-disc list-inside space-y-0.5">
+                {draft.styleNotes.map((n, i) => (
+                  <li key={i}>{n}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           <p className="border-t border-gray-800 pt-3 text-xs text-gray-500">Not sent to the dashboard yet. Review it in the editor first.</p>
           <Link href="/edit" className="btn-primary">
             Open in Editor

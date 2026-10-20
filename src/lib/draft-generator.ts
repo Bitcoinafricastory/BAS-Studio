@@ -1,81 +1,127 @@
 import { getAnthropic, DEFAULT_MODEL } from "./anthropic";
-import { getStyleSamples } from "./style-samples";
+import { getStyleSamples, styleSamplesBlock } from "./style-samples";
 import { CATEGORIES } from "./constants";
 import { slugify } from "./slugify";
+import {
+  articleSystemPrompt,
+  fixPassPrompt,
+  lintDraft,
+  sanitizeLinks,
+  extractUrls,
+  normalizeUrl,
+  HARD_RULES,
+  type StyleIssue,
+} from "./voice";
+import { getBasArchive, archiveBlock } from "./voice/archive";
 import type { Draft } from "@/types";
 
-const SYSTEM_PROMPT = (styleBlock: string) =>
-  `
-You are drafting an article for Bitcoin Africa Story, written in the writer's own voice.
-
-Below are excerpts from the writer's own previously published articles. Study their voice, sentence
-rhythm, and structure — not the topics — and match that voice in the new draft. Never imitate the
-style of any other outlet, and never lift phrasing from the source material verbatim beyond what's
-needed for direct quotes.
-
-${styleBlock}
-
-CRITICAL RULES:
-- Draft ONLY from the source material the writer provides below. Do not pull in outside facts you
-  weren't given, and do not rewrite or summarize other outlets' articles.
-- If the source material is thin, write a shorter but accurate draft rather than padding with
-  invented detail.
-- Flag any claim in the draft that should be fact-checked before publishing.
-- "category" must be exactly one of: ${CATEGORIES.join(", ")}.
-- "readTime" must be a short string like "4 min read", matching the site's existing format.
-
-Respond with ONLY a JSON object wrapped in <result></result> tags, no other text. Structure:
-{
-  "title": "...",
-  "content": "Full article body as clean HTML (p, h2, h3, strong, em, ul/li tags only — no inline styles)",
-  "excerpt": "1-2 sentence teaser",
-  "seoTitle": "...",
-  "metaDescription": "...",
-  "category": "one of the allowed categories listed above",
-  "readTime": "4 min read",
-  "suggestedEntities": ["names of people/companies/projects mentioned, for directory linking"],
-  "suggestedInternalLinks": [{"title": "...", "url": ""}],
-  "claimsToVerify": ["specific claims worth double-checking before publishing"]
+interface ParsedDraft {
+  title: string;
+  content: string;
+  excerpt: string;
+  seoTitle?: string;
+  metaDescription?: string;
+  focusKeywords?: string;
+  category?: string;
+  readTime?: string;
+  suggestedEntities?: string[];
+  suggestedInternalLinks?: { title: string; url: string }[];
+  claimsToVerify?: string[];
 }
-`.trim();
 
+function textOf(response: any): string {
+  return response.content
+    .filter((b: any) => b.type === "text")
+    .map((b: any) => b.text)
+    .join("\n");
+}
+
+function parseResult(text: string): ParsedDraft {
+  const match = text.match(/<result>([\s\S]*?)<\/result>/);
+  if (!match) throw new Error("Draft generation returned an unexpected format. Try again.");
+  return JSON.parse(match[1]);
+}
+
+/**
+ * Drafts an article in the BAS voice. The model gets the shared BAS rules, the editor's
+ * approved ledes and corrections, recent published articles for voice, and the real BAS
+ * archive for backlinks. Afterwards the draft is checked: links not found in the source
+ * material or the archive are removed, and if the style check finds slop, dashes, tables
+ * or contrast framing, the model gets one pass to fix those sentences.
+ */
 export async function generateDraft(
   sourceMaterial: string,
   kind: "notes" | "youtube" | "audio",
   sourceUrl?: string
 ): Promise<Draft> {
   const client = await getAnthropic();
-  const samples = await getStyleSamples();
+  const [samples, archive] = await Promise.all([getStyleSamples(), getBasArchive()]);
 
-  const styleBlock = samples.length
-    ? samples.map((s, i) => `--- Sample ${i + 1}: "${s.title}" ---\n${s.excerpt}`).join("\n\n")
-    : "(No published articles found yet in Firestore — write in a clear, direct, journalistic voice.)";
-
-  const response = await client.messages.create({
-    model: DEFAULT_MODEL,
-    max_tokens: 4000,
-    system: SYSTEM_PROMPT(styleBlock),
-    messages: [{ role: "user", content: `Source material (${kind}):\n\n${sourceMaterial}` }],
+  const system = articleSystemPrompt({
+    styleBlock: styleSamplesBlock(samples),
+    archiveBlock: archiveBlock(archive),
+    categories: CATEGORIES,
   });
+  const userMessage = `Source material (${kind}${sourceUrl ? `, from ${sourceUrl}` : ""}):\n\n${sourceMaterial}`;
 
-  const text = response.content
-    .filter((b: any) => b.type === "text")
-    .map((b: any) => b.text)
-    .join("\n");
+  const first = await client.messages.create({
+    model: DEFAULT_MODEL,
+    max_tokens: 6000,
+    temperature: 0.6,
+    system,
+    messages: [{ role: "user", content: userMessage }],
+  });
+  const firstText = textOf(first);
+  let parsed = parseResult(firstText);
 
-  const match = text.match(/<result>([\s\S]*?)<\/result>/);
-  if (!match) {
-    throw new Error("Draft generation returned an unexpected format — try again.");
+  const allowedLinks = [...extractUrls(sourceMaterial), ...(sourceUrl ? [sourceUrl] : []), ...archive.map((a) => a.url)];
+  const check = (p: ParsedDraft) => {
+    const { html, removed } = sanitizeLinks(p.content || "", allowedLinks);
+    const issues = lintDraft({ ...p, content: html });
+    return { html, removed, issues };
+  };
+
+  let { html, removed, issues } = check(parsed);
+
+  // One fix pass for the hard style problems. Facts and links must not change.
+  const hard = issues.filter((i: StyleIssue) => HARD_RULES.has(i.rule));
+  if (hard.length) {
+    try {
+      const second = await client.messages.create({
+        model: DEFAULT_MODEL,
+        max_tokens: 6000,
+        temperature: 0.3,
+        system,
+        messages: [
+          { role: "user", content: userMessage },
+          { role: "assistant", content: firstText },
+          { role: "user", content: fixPassPrompt(hard.map((i) => i.message)) },
+        ],
+      });
+      const fixed = parseResult(textOf(second));
+      parsed = { ...parsed, ...fixed };
+      ({ html, removed, issues } = check(parsed));
+    } catch (err) {
+      // Keep the first draft; the remaining issues are shown to the editor.
+      console.error("Style fix pass failed:", err);
+    }
   }
 
-  const parsed = JSON.parse(match[1]);
+  const archiveUrls = new Set(archive.map((a) => normalizeUrl(a.url)));
+  const internalLinks = (parsed.suggestedInternalLinks || []).filter((l) => l?.url && archiveUrls.has(normalizeUrl(l.url)));
+
+  const claims = [...(parsed.claimsToVerify || [])];
+  if (removed.length) {
+    claims.push(`Removed ${removed.length} link${removed.length > 1 ? "s" : ""} not found in your source material or the BAS archive: ${removed.join(", ")}`);
+  }
+
   const now = new Date().toISOString();
-  const category = CATEGORIES.includes(parsed.category) ? parsed.category : CATEGORIES[0];
+  const category = parsed.category && CATEGORIES.includes(parsed.category) ? parsed.category : CATEGORIES[0];
 
   return {
     title: parsed.title,
     slug: slugify(parsed.title),
-    content: parsed.content,
+    content: html,
     excerpt: parsed.excerpt,
     category,
     image: "",
@@ -87,10 +133,11 @@ export async function generateDraft(
     status: "draft",
     seoTitle: parsed.seoTitle || parsed.title,
     metaDescription: parsed.metaDescription || parsed.excerpt,
-    focusKeywords: "",
+    focusKeywords: parsed.focusKeywords || "",
     suggestedEntities: parsed.suggestedEntities || [],
-    suggestedInternalLinks: parsed.suggestedInternalLinks || [],
-    claimsToVerify: parsed.claimsToVerify || [],
+    suggestedInternalLinks: internalLinks,
+    claimsToVerify: claims,
+    styleNotes: issues.map((i) => i.message),
     createdAt: now,
     updatedAt: now,
     sourceMaterial: { kind, raw: sourceMaterial },
