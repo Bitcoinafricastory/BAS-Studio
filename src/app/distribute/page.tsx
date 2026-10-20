@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { Loader2, Search, ArrowLeft, Sparkles, ImageIcon, ChevronDown } from "lucide-react";
 import OutputCard, { CardState } from "@/components/distribute/OutputCard";
+import { Page, PageHeader, EmptyState, ErrorBanner } from "@/components/ui/Page";
 import { OUTPUT_SPECS, CORE_OUTPUTS, OPTIONAL_OUTPUTS } from "@/lib/distribution/outputs";
 import type { ArticleListItem, ArticleRecord, AuthorRecord, FactSheet, OutputId } from "@/lib/distribution/types";
 
@@ -125,11 +126,11 @@ export default function DistributePage() {
   // ---------- Step 1: choose an article
   if (!article || !factSheet) {
     return (
-      <div className="max-w-3xl mx-auto p-4 sm:p-6">
-        <h1 className="text-xl font-semibold text-gray-50">Distribute</h1>
-        <p className="text-sm text-gray-500 mb-6">
-          Pick a published article. Studio drafts the X and LinkedIn posts, checks them against the article, and you review. Nothing posts automatically.
-        </p>
+      <Page>
+        <PageHeader
+          title="Distribute"
+          description="Pick a published article. Studio drafts the X and LinkedIn posts, checks them against the article, and you review. Nothing posts automatically."
+        />
 
         <div className="relative mb-4">
           <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
@@ -137,19 +138,25 @@ export default function DistributePage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search published articles"
-            className="w-full rounded-full bg-gray-900/70 border border-gray-800 focus:border-bas-gold/40 focus:outline-none pl-10 pr-4 py-2.5 text-sm"
+            className="input rounded-full pl-10 pr-4"
           />
         </div>
 
         {listLoading && (
-          <div className="flex items-center gap-2 text-gray-500 text-sm">
-            <Loader2 size={14} className="animate-spin" /> Loading published articles…
+          <div className="flex flex-col gap-2" aria-busy="true">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="skeleton h-[82px]" />
+            ))}
           </div>
         )}
-        {listError && <p className="text-sm text-red-400">{listError}</p>}
-        {selectError && <p className="text-sm text-red-400 mb-3">{selectError}</p>}
+        {listError && <ErrorBanner message={listError} />}
+        {selectError && <ErrorBanner message={selectError} />}
         {!listLoading && !listError && filtered.length === 0 && (
-          <p className="text-sm text-gray-500">No published articles found.</p>
+          <EmptyState
+            icon={Search}
+            title={query ? "No matches" : "No published articles"}
+            body={query ? "Try a different title or author." : "Articles marked as published in your dashboard will appear here."}
+          />
         )}
 
         <ul className="flex flex-col gap-2">
@@ -158,7 +165,7 @@ export default function DistributePage() {
               <button
                 onClick={() => pick(a.id)}
                 disabled={!!selecting}
-                className="w-full text-left flex items-center gap-3 rounded-2xl border border-gray-800 bg-gray-900/40 hover:border-bas-gold/40 hover:bg-gray-900/70 disabled:opacity-60 p-3 transition-colors focus-ring"
+                className="card flex w-full items-center gap-3 p-3 text-left transition-colors hover:border-bas-gold/40 hover:bg-gray-900/70 disabled:opacity-60 focus-ring"
               >
                 {a.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -183,13 +190,13 @@ export default function DistributePage() {
             </li>
           ))}
         </ul>
-      </div>
+      </Page>
     );
   }
 
   // ---------- Step 2: set up and review
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6">
+    <Page width="max-w-4xl">
       <button
         onClick={() => {
           setArticle(null);
@@ -205,7 +212,7 @@ export default function DistributePage() {
       <p className="text-xs text-gray-500 mt-1 break-all">{article.url}</p>
 
       <div className="mt-5 grid gap-4 md:grid-cols-[1fr_260px]">
-        <div className="rounded-2xl border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-4">
+        <div className="card flex flex-col gap-4 p-4">
           <div>
             <p className="text-xs font-semibold text-gray-400 mb-2">Author</p>
             {knownAuthors.length > 0 && (
@@ -248,7 +255,7 @@ export default function DistributePage() {
               value={angle}
               onChange={(e) => setAngle(e.target.value)}
               placeholder="e.g. lead with the new Dev Con name"
-              className="w-full mt-2 rounded-lg bg-black/50 border border-gray-800 focus:border-bas-gold/40 focus:outline-none px-3 py-2 text-sm"
+              className="input mt-2"
             />
           </div>
 
@@ -276,14 +283,14 @@ export default function DistributePage() {
           <button
             onClick={generateAll}
             disabled={!authorReady || selected.length === 0 || anyLoading}
-            className="self-start flex items-center gap-2 px-5 py-2.5 rounded-full bg-bas-gold hover:bg-bas-gold-hover disabled:opacity-40 text-black text-sm font-semibold transition-colors focus-ring"
+            className="btn-primary self-start"
           >
             {anyLoading ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
             {order.length ? "Generate again" : "Generate posts"}
           </button>
         </div>
 
-        <aside className="rounded-2xl border border-gray-800 bg-gray-900/40 p-4 flex flex-col gap-3 h-fit">
+        <aside className="card flex h-fit flex-col gap-3 p-4">
           <p className="text-xs font-semibold text-gray-400">Media</p>
           {article.image ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -316,7 +323,7 @@ export default function DistributePage() {
           />
         ))}
       </div>
-    </div>
+    </Page>
   );
 }
 

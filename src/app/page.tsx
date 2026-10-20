@@ -39,6 +39,7 @@ export default function HomePage() {
   const endRef = useRef<HTMLDivElement>(null);
 
   const started = messages.length > 0;
+  const handedOver = useRef(false);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -76,6 +77,17 @@ export default function HomePage() {
     },
     [messages, loading, deepSearch, provider]
   );
+
+  // A lead on the Leads screen can hand a question straight to the chat via ?q=.
+  useEffect(() => {
+    if (handedOver.current) return;
+    const q = new URLSearchParams(window.location.search).get("q");
+    if (q) {
+      handedOver.current = true;
+      window.history.replaceState(null, "", "/");
+      send(q);
+    }
+  }, [send]);
 
   function toggleDictation() {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;

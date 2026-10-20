@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
+import { Page, PageHeader, ErrorBanner } from "@/components/ui/Page";
 import { FileText, Youtube, Mic, Loader2, Sparkles, Upload } from "lucide-react";
 import type { Draft } from "@/types";
 
@@ -23,6 +25,15 @@ export default function NewDraftPage() {
   const [error, setError] = useState("");
 
   const sourceMaterial = mode === "notes" ? notes : transcript;
+
+  // "Draft from this" on a lead arrives with the lead's details as ?notes=.
+  useEffect(() => {
+    const n = new URLSearchParams(window.location.search).get("notes");
+    if (n) {
+      setNotes(n);
+      window.history.replaceState(null, "", "/draft");
+    }
+  }, []);
 
   async function fetchYoutubeTranscript() {
     if (!youtubeUrl.trim()) return;
@@ -96,10 +107,13 @@ export default function NewDraftPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-4 sm:p-6">
-      <h1 className="text-xl font-semibold text-gray-50 mb-6">New Draft</h1>
+    <Page width="max-w-2xl">
+      <PageHeader
+        title="New Draft"
+        description="Turn notes, a YouTube video or a recording into a draft in the BAS voice. You review it before anything is saved to the dashboard."
+      />
 
-      <div className="flex items-center gap-1 mb-5 bg-gray-900/50 border border-gray-800 rounded-lg p-1 w-fit">
+      <div className="mb-5 flex w-fit items-center gap-1 rounded-full border border-gray-800 bg-gray-900/50 p-1">
         <ModeTab icon={FileText} label="Notes" active={mode === "notes"} onClick={() => setMode("notes")} />
         <ModeTab icon={Youtube} label="YouTube" active={mode === "youtube"} onClick={() => setMode("youtube")} />
         <ModeTab icon={Mic} label="Audio/Video" active={mode === "audio"} onClick={() => setMode("audio")} />
@@ -111,8 +125,16 @@ export default function NewDraftPage() {
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Type your notes — facts, quotes, context. The draft will be built only from what you write here."
           rows={10}
-          className="w-full bg-gray-900/50 border border-gray-800 rounded-xl px-4 py-3 text-sm text-gray-50 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-bas-gold resize-none"
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "Enter") generate();
+          }}
+          className="input resize-y rounded-2xl px-4 py-3 leading-relaxed"
         />
+      )}
+      {mode === "notes" && (
+        <p className="mt-2 text-xs text-gray-600">
+          {notes.trim() ? `${notes.trim().split(/\s+/).length} words · ` : ""}Press ⌘/Ctrl + Enter to generate
+        </p>
       )}
 
       {mode === "youtube" && (
@@ -122,12 +144,12 @@ export default function NewDraftPage() {
               value={youtubeUrl}
               onChange={(e) => setYoutubeUrl(e.target.value)}
               placeholder="https://youtube.com/watch?v=…"
-              className="flex-1 bg-gray-900/50 border border-gray-800 rounded-lg px-4 py-2.5 text-sm text-gray-50 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-bas-gold"
+              className="input flex-1"
             />
             <button
               onClick={fetchYoutubeTranscript}
               disabled={transcribing || !youtubeUrl.trim()}
-              className="flex items-center gap-2 bg-bas-gold hover:bg-bas-gold-hover disabled:opacity-50 text-black font-medium text-sm rounded-lg px-4 transition-colors shrink-0"
+              className="btn-primary shrink-0"
             >
               {transcribing ? <Loader2 size={15} className="animate-spin" /> : "Fetch transcript"}
             </button>
@@ -148,7 +170,7 @@ export default function NewDraftPage() {
                 value={transcript}
                 onChange={(e) => setTranscript(e.target.value)}
                 rows={10}
-                className="w-full bg-gray-900/50 border border-gray-800 rounded-xl px-4 py-3 text-sm text-gray-50 focus:outline-none focus:ring-2 focus:ring-bas-gold resize-none"
+                className="input resize-y rounded-2xl px-4 py-3 leading-relaxed"
               />
             </>
           )}
@@ -167,7 +189,7 @@ export default function NewDraftPage() {
             />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="flex-1 flex items-center gap-2 justify-center bg-gray-900/50 border border-dashed border-gray-700 rounded-lg px-4 py-3 text-sm text-gray-400 hover:border-bas-gold/50 hover:text-gray-200 transition-colors"
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-dashed border-gray-700 bg-gray-900/40 px-4 py-3 text-sm text-gray-400 transition-colors hover:border-bas-gold/50 hover:text-gray-200 focus-ring"
             >
               <Upload size={15} />
               {audioFile ? audioFile.name : "Choose an audio or video file"}
@@ -175,7 +197,7 @@ export default function NewDraftPage() {
             <button
               onClick={transcribeAudioFile}
               disabled={transcribing || !audioFile}
-              className="flex items-center gap-2 bg-bas-gold hover:bg-bas-gold-hover disabled:opacity-50 text-black font-medium text-sm rounded-lg px-4 transition-colors shrink-0"
+              className="btn-primary shrink-0"
             >
               {transcribing ? <Loader2 size={15} className="animate-spin" /> : "Transcribe"}
             </button>
@@ -193,26 +215,30 @@ export default function NewDraftPage() {
                 value={transcript}
                 onChange={(e) => setTranscript(e.target.value)}
                 rows={10}
-                className="w-full bg-gray-900/50 border border-gray-800 rounded-xl px-4 py-3 text-sm text-gray-50 focus:outline-none focus:ring-2 focus:ring-bas-gold resize-none"
+                className="input resize-y rounded-2xl px-4 py-3 leading-relaxed"
               />
             </>
           )}
         </div>
       )}
 
-      {error && <p className="text-sm text-red-400 mt-4">{error}</p>}
+      {error && (
+        <div className="mt-4">
+          <ErrorBanner message={error} />
+        </div>
+      )}
 
       <button
         onClick={generate}
         disabled={generating || !sourceMaterial.trim()}
-        className="mt-5 w-full flex items-center gap-2 justify-center bg-bas-gold hover:bg-bas-gold-hover disabled:opacity-40 text-black font-semibold rounded-lg py-3 transition-colors"
+        className="btn-primary mt-5 w-full py-3"
       >
         {generating ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-        Generate draft in my voice
+        {generating ? "Writing your draft…" : "Generate draft in my voice"}
       </button>
 
       {draft && (
-        <div className="mt-6 bg-gray-900/50 border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
+        <div className="card page-enter mt-6 flex flex-col gap-3 p-5">
           <h2 className="font-semibold text-gray-50 text-lg">{draft.title}</h2>
           <p className="text-sm text-gray-400">{draft.excerpt}</p>
           <div className="flex items-center gap-3 text-xs text-gray-500">
@@ -231,16 +257,13 @@ export default function NewDraftPage() {
               </ul>
             </div>
           )}
-          <p className="text-xs text-gray-500 pt-2 border-t border-gray-800">Saved locally.</p>
-          <a
-            href="/edit"
-            className="flex items-center justify-center gap-2 bg-bas-gold hover:bg-bas-gold-hover text-black font-semibold rounded-lg py-2.5 transition-colors"
-          >
+          <p className="border-t border-gray-800 pt-3 text-xs text-gray-500">Not sent to the dashboard yet. Review it in the editor first.</p>
+          <Link href="/edit" className="btn-primary">
             Open in Editor
-          </a>
+          </Link>
         </div>
       )}
-    </div>
+    </Page>
   );
 }
 
@@ -258,7 +281,7 @@ function ModeTab({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+      className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium transition-colors focus-ring ${
         active ? "bg-bas-gold text-black" : "text-gray-400 hover:text-gray-100"
       }`}
     >

@@ -5,16 +5,9 @@ import dynamic from "next/dynamic";
 import { CATEGORIES } from "@/lib/constants";
 import { slugify } from "@/lib/slugify";
 import type { Draft } from "@/types";
-import {
-  Loader2,
-  Send,
-  Sparkles,
-  CheckCircle2,
-  ExternalLink,
-  Users,
-  Link2,
-  AlertTriangle,
-} from "lucide-react";
+import { Loader2, Send, Sparkles, CheckCircle2, ExternalLink, Users, Link2, AlertTriangle, FileEdit } from "lucide-react";
+import Link from "next/link";
+import { Page, EmptyState, ErrorBanner } from "@/components/ui/Page";
 import DictationButton from "@/components/editor/DictationButton";
 
 const StoryEditor = dynamic(() => import("@/components/editor/StoryEditor"), { ssr: false });
@@ -155,34 +148,47 @@ export default function EditSendPage() {
 
   if (!form) {
     return (
-      <div className="max-w-2xl mx-auto p-6 text-center text-sm text-gray-500">
-        No draft is open. Generate one from{" "}
-        <a href="/draft" className="text-bas-gold hover:underline">
-          New Draft
-        </a>{" "}
-        first.
-      </div>
+      <Page width="max-w-xl">
+        <EmptyState
+          icon={FileEdit}
+          title="No draft is open"
+          body="Generate a draft from New Draft, or from a lead or a Home chat, and it will open here for review."
+          action={
+            <Link href="/draft" className="btn-primary">
+              Start a draft
+            </Link>
+          }
+        />
+      </Page>
     );
   }
 
   if (sentId) {
     return (
-      <div className="max-w-md mx-auto p-6 mt-16 text-center flex flex-col items-center gap-3">
-        <CheckCircle2 size={32} className="text-bas-gold" />
-        <h1 className="text-lg font-semibold text-gray-50">Sent to your dashboard</h1>
-        <p className="text-sm text-gray-500">
-          Saved as a draft in your `news` collection. Publish it from your existing dashboard when
-          you're ready.
-        </p>
-        <a href="/draft" className="text-sm text-bas-gold hover:underline mt-2">
-          Start another draft
-        </a>
-      </div>
+      <Page width="max-w-md">
+        <div className="mt-16 flex flex-col items-center gap-3 text-center">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-bas-gold/10 text-bas-gold">
+            <CheckCircle2 size={28} />
+          </span>
+          <h1 className="text-xl font-semibold text-gray-50">Sent to your dashboard</h1>
+          <p className="text-sm leading-relaxed text-gray-500">
+            Saved as a draft. Publish it from your BAS dashboard when you're ready.
+          </p>
+          <div className="mt-3 flex gap-2">
+            <Link href="/draft" className="btn-primary">
+              Start another draft
+            </Link>
+            <Link href="/distribute" className="btn-secondary">
+              Distribute a story
+            </Link>
+          </div>
+        </div>
+      </Page>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="page-enter mx-auto grid max-w-6xl grid-cols-1 gap-6 px-4 py-8 sm:px-8 lg:grid-cols-3">
       {/* Main column */}
       <div className="lg:col-span-2 flex flex-col gap-4">
         <input
@@ -197,7 +203,7 @@ export default function EditSendPage() {
           onChange={(e) => update({ excerpt: e.target.value })}
           placeholder="Excerpt — 1-2 sentence teaser shown in article lists"
           rows={2}
-          className="w-full bg-gray-900/50 border border-gray-800 rounded-lg px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-bas-gold resize-none"
+          className="input resize-none"
         />
 
         <div className="flex items-center justify-between">
@@ -231,24 +237,22 @@ export default function EditSendPage() {
         </div>
 
         {error && (
-          <p className="text-sm text-red-400 flex items-center gap-2">
-            <AlertTriangle size={14} className="shrink-0" /> {error}
-          </p>
+          <ErrorBanner message={error} />
         )}
 
         <button
           onClick={sendToFirebase}
           disabled={sending}
-          className="flex items-center gap-2 justify-center bg-bas-gold hover:bg-bas-gold-hover disabled:opacity-50 text-black font-semibold rounded-lg py-3 transition-colors"
+          className="btn-primary py-3"
         >
           {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-          Send to dashboard (as draft)
+          {sending ? "Sending…" : "Send to dashboard (as draft)"}
         </button>
       </div>
 
       {/* Sidebar */}
       <div className="flex flex-col gap-4">
-        <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 flex flex-col gap-3">
+        <div className="card p-4 flex flex-col gap-3">
           <ImageUploader
             value={form.image}
             preview={imagePreview}
@@ -264,18 +268,18 @@ export default function EditSendPage() {
             value={form.imageAlt}
             onChange={(e) => update({ imageAlt: e.target.value })}
             placeholder="Image alt text"
-            className="bg-black border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-50 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-bas-gold"
+            className="input"
           />
         </div>
 
-        <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 flex flex-col gap-3">
+        <div className="card p-4 flex flex-col gap-3">
           <h3 className="text-sm font-semibold text-gray-200">Article details</h3>
           <div>
             <label className="block text-xs text-gray-500 mb-1">Category</label>
             <select
               value={form.category}
               onChange={(e) => update({ category: e.target.value })}
-              className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-50 focus:outline-none focus:ring-2 focus:ring-bas-gold"
+              className="input"
             >
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>
@@ -291,7 +295,7 @@ export default function EditSendPage() {
                 type="date"
                 value={form.date}
                 onChange={(e) => update({ date: e.target.value })}
-                className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-50 focus:outline-none focus:ring-2 focus:ring-bas-gold"
+                className="input"
               />
             </div>
             <div>
@@ -300,7 +304,7 @@ export default function EditSendPage() {
                 value={form.readTime}
                 onChange={(e) => update({ readTime: e.target.value })}
                 placeholder="4 min read"
-                className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-50 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-bas-gold"
+                className="input"
               />
             </div>
           </div>
@@ -310,36 +314,36 @@ export default function EditSendPage() {
               value={form.youtubeUrl}
               onChange={(e) => update({ youtubeUrl: e.target.value })}
               placeholder="https://youtube.com/watch?v=…"
-              className="w-full bg-black border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-50 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-bas-gold"
+              className="input"
             />
           </div>
         </div>
 
-        <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 flex flex-col gap-3">
+        <div className="card p-4 flex flex-col gap-3">
           <h3 className="text-sm font-semibold text-gray-200">SEO</h3>
           <input
             value={form.seoTitle}
             onChange={(e) => update({ seoTitle: e.target.value })}
             placeholder="SEO title"
-            className="bg-black border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-50 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-bas-gold"
+            className="input"
           />
           <textarea
             value={form.metaDescription}
             onChange={(e) => update({ metaDescription: e.target.value })}
             placeholder="Meta description"
             rows={2}
-            className="bg-black border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-50 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-bas-gold resize-none"
+            className="input resize-none"
           />
           <input
             value={form.focusKeywords}
             onChange={(e) => update({ focusKeywords: e.target.value })}
             placeholder="Focus keywords, comma separated"
-            className="bg-black border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-50 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-bas-gold"
+            className="input"
           />
         </div>
 
         {form.suggestedEntities?.length > 0 && (
-          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 flex flex-col gap-2">
+          <div className="card p-4 flex flex-col gap-2">
             <h3 className="text-sm font-semibold text-gray-200 flex items-center gap-1.5">
               <Users size={14} /> Suggested directory links
             </h3>
@@ -360,7 +364,7 @@ export default function EditSendPage() {
         )}
 
         {form.suggestedInternalLinks?.length > 0 && (
-          <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-4 flex flex-col gap-2">
+          <div className="card p-4 flex flex-col gap-2">
             <h3 className="text-sm font-semibold text-gray-200 flex items-center gap-1.5">
               <Link2 size={14} /> Suggested internal links
             </h3>

@@ -49,3 +49,44 @@ html {
   background: #1f2937;
   color: #f9fafb;
 }
+
+/* ---- Shared design tokens: every screen uses these so spacing, inputs and buttons match. ---- */
+@layer components {
+  .card {
+    @apply rounded-2xl border border-gray-800 bg-gray-900/40;
+  }
+  .input {
+    @apply w-full rounded-xl border border-gray-800 bg-black/50 px-3.5 py-2.5 text-sm text-gray-50 placeholder-gray-600 transition-colors focus:border-bas-gold/50 focus:outline-none focus:ring-2 focus:ring-bas-gold/20;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-bas-gold px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-bas-gold-hover disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-gray-800 px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:border-gray-700 hover:bg-gray-900 hover:text-gray-50 disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .skeleton {
+    @apply animate-pulse rounded-xl bg-gray-900;
+  }
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.page-enter {
+  animation: page-enter 0.25s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-enter {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}
