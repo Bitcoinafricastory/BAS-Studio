@@ -4,16 +4,12 @@ import Image from "next/image";
 import { useState, useRef, useEffect, useCallback, Dispatch, SetStateAction } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, Mic, MicOff, ScanLine, Search, Loader2, ArrowUp, PenSquare, SquarePlus, AlertCircle } from "lucide-react";
+import { Plus, Mic, MicOff, ScanLine, Search, Loader2, ArrowUp, PenSquare, SquarePlus, AlertCircle, History } from "lucide-react";
+import ChatHistory from "@/components/chat/ChatHistory";
 import ResearchCard from "@/components/assistant/ResearchCard";
-import type { ResearchResult } from "@/types";
+import type { ChatMessage, ChatProvider } from "@/types/chat";
 
-interface ChatMessage {
-  role: "user" | "assistant";
-  content: string;
-  research?: ResearchResult;
-  error?: boolean;
-}
+const HISTORY_KEY = "bas-studio-history-open";
 
 const QUICK_CHIPS = [
   { label: "Bitcoin News in Africa", prompt: "What's the latest Bitcoin news across Africa right now?" },
@@ -32,13 +28,23 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [draftingFromChat, setDraftingFromChat] = useState(false);
   const [deepSearch, setDeepSearch] = useState(false);
-  const [provider, setProvider] = useState<"claude" | "grok">("claude");
+  const [provider, setProvider] = useState<ChatProvider>("claude");
   const [listening, setListening] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(true);
   const recognitionRef = useRef<any>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
-  const started = messages.length > 0;
+  // Chat history: every conversation is saved under an id that also lives in the URL (?c=…),
+  // so a refresh, a bookmark or a shared link reopens the same chat.
+  const [chatId, setChatId] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyVersion, setHistoryVersion] = useState(0);
+  const [loadingChat, setLoadingChat] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const savedCount = useRef(0); // how many messages the server already has for this chat
+  const openedFromUrl = useRef(false);
+
+  const started = messages.length > 0 || loadingChat;
   const handedOver = useRef(false);
 
   useEffect(() => {
@@ -77,6 +83,86 @@ export default function HomePage() {
     },
     [messages, loading, deepSearch, provider]
   );
+
+  // Save after every finished reply. The chat id is created in the browser on the first
+  // message, so quick successive saves always update one document.
+  useEffect(() => {
+    if (loading || messages.length === 0) return;
+    if (messages[messages.length - 1].role !== "assistant") return;
+    if (messages.length === savedCount.current) return;
+
+    let id = chatId;
+    if (!id) {
+      id = crypto.randomUUID();
+      setChatId(id);
+      window.history.replaceState(null, "", `/?c=${id}`);
+    }
+    const count = messages.length;
+    savedCount.current = count;
+    fetch("/api/chats", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, messages, provider }),
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Could not save this chat");
+        setSaveError("");
+        setHistoryVersion((v) => v + 1);
+      })
+      .catch((e) => {
+        savedCount.current = 0; // try again after the next reply
+        setSaveError(e.message || "Could not save this chat");
+      });
+  }, [messages, loading, chatId, provider]);
+
+  const loadChat = useCallback(async (id: string) => {
+    setLoadingChat(true);
+    setSaveError("");
+    try {
+      const res = await fetch(`/api/chats?id=${id}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not open that chat");
+      setMessages(data.chat.messages);
+      setProvider(data.chat.provider);
+      setChatId(id);
+      savedCount.current = data.chat.messages.length;
+      window.history.replaceState(null, "", `/?c=${id}`);
+    } catch (e: any) {
+      setMessages([{ role: "assistant", content: e.message || "Could not open that chat", error: true }]);
+      savedCount.current = 1; // an error note is not a conversation worth saving
+      setChatId(null);
+      window.history.replaceState(null, "", "/");
+    } finally {
+      setLoadingChat(false);
+    }
+  }, []);
+
+  // Reopen the chat named in the URL, and restore the panel the way it was left.
+  useEffect(() => {
+    if (openedFromUrl.current) return;
+    openedFromUrl.current = true;
+    const c = new URLSearchParams(window.location.search).get("c");
+    if (c) loadChat(c);
+    try {
+      const stored = localStorage.getItem(HISTORY_KEY);
+      setHistoryOpen(stored === null ? window.innerWidth >= 1024 : stored === "1");
+    } catch {}
+  }, [loadChat]);
+
+  function toggleHistory() {
+    setHistoryOpen((o) => {
+      try {
+        localStorage.setItem(HISTORY_KEY, o ? "0" : "1");
+      } catch {}
+      return !o;
+    });
+  }
+
+  function selectChat(id: string) {
+    if (loading || id === chatId) return;
+    if (window.innerWidth < 1024) setHistoryOpen(false);
+    loadChat(id);
+  }
 
   // A lead on the Leads screen can hand a question straight to the chat via ?q=.
   useEffect(() => {
@@ -159,14 +245,76 @@ export default function HomePage() {
     !messages[messages.length - 1].error;
 
   function newChat() {
+    if (loading) return;
     setMessages([]);
     setInput("");
+    setChatId(null);
+    setSaveError("");
+    savedCount.current = 0;
+    window.history.replaceState(null, "", "/");
   }
 
+  const topBar = (
+    <div className="flex items-center justify-between gap-2 px-4 pt-4 sm:px-6">
+      <div className="flex items-center gap-1">
+        <button
+          onClick={toggleHistory}
+          aria-pressed={historyOpen}
+          className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs transition-colors focus-ring ${
+            historyOpen ? "bg-gray-900 text-gray-50" : "text-gray-400 hover:bg-gray-900 hover:text-gray-50"
+          }`}
+        >
+          <History size={14} /> History
+        </button>
+        {(messages.length > 0 || chatId) && (
+          <button
+            onClick={newChat}
+            disabled={loading}
+            className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs text-gray-400 transition-colors hover:bg-gray-900 hover:text-gray-50 disabled:opacity-40 focus-ring"
+          >
+            <SquarePlus size={14} /> New chat
+          </button>
+        )}
+        {saveError && (
+          <span className="ml-2 text-xs text-amber-300" role="status">
+            Couldn't save this chat. It will retry after your next message.
+          </span>
+        )}
+      </div>
+      {messages.length > 0 && !loadingChat && (
+        <button
+          onClick={draftFromChat}
+          disabled={draftingFromChat}
+          className="flex items-center gap-1.5 text-xs px-3.5 py-2 rounded-full bg-bas-gold hover:bg-bas-gold-hover disabled:opacity-50 text-on-gold font-semibold transition-colors focus-ring"
+        >
+          {draftingFromChat ? <Loader2 size={12} className="animate-spin" /> : <PenSquare size={12} />}
+          Draft this
+        </button>
+      )}
+    </div>
+  );
+
   return (
-    <div className="h-screen flex flex-col bg-black">
+    <div className="flex h-screen bg-black">
+      <ChatHistory
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        activeId={chatId}
+        busy={loading}
+        version={historyVersion}
+        onSelect={selectChat}
+        onNew={() => {
+          if (window.innerWidth < 1024) setHistoryOpen(false);
+          newChat();
+        }}
+        onDeleted={(id) => {
+          if (id === chatId) newChat();
+        }}
+      />
+      <div className="flex min-w-0 flex-1 flex-col">
+      {topBar}
       {!started ? (
-        <div className="flex-1 flex flex-col items-center justify-center px-4 relative overflow-hidden">
+        <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden px-4 pb-16">
           {/* Soft radial glow behind the mark — the one bit of visual flourish */}
           <div
             className="absolute w-[520px] h-[520px] rounded-full opacity-[0.07] blur-3xl pointer-events-none"
@@ -213,23 +361,12 @@ export default function HomePage() {
 
       ) : (
         <>
-          <div className="flex items-center justify-between px-4 sm:px-8 pt-4">
-            <button
-              onClick={newChat}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full text-gray-400 hover:text-gray-50 hover:bg-gray-900 transition-colors focus-ring"
-            >
-              <SquarePlus size={14} /> New chat
-            </button>
-            <button
-              onClick={draftFromChat}
-              disabled={draftingFromChat}
-              className="flex items-center gap-1.5 text-xs px-3.5 py-2 rounded-full bg-bas-gold hover:bg-bas-gold-hover disabled:opacity-50 text-on-gold font-semibold transition-colors focus-ring"
-            >
-              {draftingFromChat ? <Loader2 size={12} className="animate-spin" /> : <PenSquare size={12} />}
-              Draft this
-            </button>
-          </div>
           <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-4 max-w-3xl w-full mx-auto flex flex-col gap-6">
+            {loadingChat && (
+              <div className="flex items-center gap-2 text-gray-500 text-sm" aria-busy="true">
+                <Loader2 size={14} className="animate-spin" /> Opening chat…
+              </div>
+            )}
             {messages.map((m, i) =>
               m.research ? (
                 <div key={i} className="max-w-[90%] self-start">
@@ -291,6 +428,7 @@ export default function HomePage() {
           </div>
         </>
       )}
+      </div>
     </div>
   );
 }
@@ -315,8 +453,8 @@ function SearchBar({
   onSubmit: (e: React.FormEvent) => void;
   deepSearch: boolean;
   setDeepSearch: Dispatch<SetStateAction<boolean>>;
-  provider: "claude" | "grok";
-  setProvider: (v: "claude" | "grok") => void;
+  provider: ChatProvider;
+  setProvider: (v: ChatProvider) => void;
   listening: boolean;
   speechSupported: boolean;
   onDictate: () => void;
