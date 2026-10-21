@@ -11,6 +11,7 @@ import {
   SquarePen,
   Rss,
   Share2,
+  Link2,
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
@@ -25,6 +26,7 @@ const NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/leads", label: "Leads", icon: Newspaper },
   { href: "/draft", label: "New Draft", icon: SquarePen },
   { href: "/distribute", label: "Distribute", icon: Share2 },
+  { href: "/outreach", label: "Outreach", icon: Link2 },
   { href: "/sources", label: "Sources", icon: Rss },
 ];
 
