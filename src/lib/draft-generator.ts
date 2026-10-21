@@ -51,7 +51,7 @@ function parseResult(text: string): ParsedDraft {
  */
 export async function generateDraft(
   sourceMaterial: string,
-  kind: "notes" | "youtube" | "audio",
+  kind: "notes" | "youtube" | "audio" | "xspace",
   sourceUrl?: string
 ): Promise<Draft> {
   const client = await getAnthropic();

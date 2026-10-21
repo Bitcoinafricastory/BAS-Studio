@@ -3,16 +3,17 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Page, PageHeader, ErrorBanner } from "@/components/ui/Page";
-import { FileText, Youtube, Mic, Loader2, Sparkles, Upload } from "lucide-react";
+import { FileText, Youtube, Mic, Radio, Loader2, Sparkles, Upload } from "lucide-react";
 import type { Draft } from "@/types";
 
-type Mode = "notes" | "youtube" | "audio";
+type Mode = "notes" | "youtube" | "xspace" | "audio";
 
 export default function NewDraftPage() {
   const [mode, setMode] = useState<Mode>("notes");
 
   const [notes, setNotes] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [spaceUrl, setSpaceUrl] = useState("");
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -58,6 +59,29 @@ export default function NewDraftPage() {
     }
   }
 
+  async function fetchSpaceTranscript() {
+    if (!spaceUrl.trim()) return;
+    setTranscribing(true);
+    setError("");
+    setTranscript("");
+    setTranscribeMethod(null);
+    try {
+      const res = await fetch("/api/transcribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ xSpaceUrl: spaceUrl.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Transcription failed");
+      setTranscript(data.text);
+      setTranscribeMethod(data.method);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setTranscribing(false);
+    }
+  }
+
   async function transcribeAudioFile() {
     if (!audioFile) return;
     setTranscribing(true);
@@ -91,7 +115,7 @@ export default function NewDraftPage() {
         body: JSON.stringify({
           sourceMaterial: sourceMaterial.trim(),
           kind: mode,
-          sourceUrl: mode === "youtube" ? youtubeUrl.trim() : undefined,
+          sourceUrl: mode === "youtube" ? youtubeUrl.trim() : mode === "xspace" ? spaceUrl.trim() : undefined,
         }),
       });
       const data = await res.json();
@@ -110,12 +134,13 @@ export default function NewDraftPage() {
     <Page width="max-w-2xl">
       <PageHeader
         title="New Draft"
-        description="Turn notes, a YouTube video or a recording into a draft in the BAS voice. You review it before anything is saved to the dashboard."
+        description="Turn notes, a YouTube video, an X Space or a recording into a draft in the BAS voice. You review it before anything is saved to the dashboard."
       />
 
       <div className="mb-5 flex w-fit items-center gap-1 rounded-full border border-gray-800 bg-gray-900/50 p-1">
         <ModeTab icon={FileText} label="Notes" active={mode === "notes"} onClick={() => setMode("notes")} />
         <ModeTab icon={Youtube} label="YouTube" active={mode === "youtube"} onClick={() => setMode("youtube")} />
+        <ModeTab icon={Radio} label="X Space" active={mode === "xspace"} onClick={() => setMode("xspace")} />
         <ModeTab icon={Mic} label="Audio/Video" active={mode === "audio"} onClick={() => setMode("audio")} />
       </div>
 
@@ -166,6 +191,45 @@ export default function NewDraftPage() {
                 Transcript pulled via {transcribeMethod === "captions" ? "YouTube captions" : "local Whisper"} — edit
                 if needed:
               </p>
+              <textarea
+                value={transcript}
+                onChange={(e) => setTranscript(e.target.value)}
+                rows={10}
+                className="input resize-y rounded-2xl px-4 py-3 leading-relaxed"
+              />
+            </>
+          )}
+        </div>
+      )}
+
+      {mode === "xspace" && (
+        <div className="flex flex-col gap-3">
+          <div className="flex gap-2">
+            <input
+              value={spaceUrl}
+              onChange={(e) => setSpaceUrl(e.target.value)}
+              placeholder="https://x.com/i/spaces/…"
+              className="input flex-1"
+            />
+            <button
+              onClick={fetchSpaceTranscript}
+              disabled={transcribing || !spaceUrl.trim()}
+              className="btn-primary shrink-0"
+            >
+              {transcribing ? <Loader2 size={15} className="animate-spin" /> : "Transcribe Space"}
+            </button>
+          </div>
+          <p className="text-xs text-gray-600">
+            Works for ended Spaces whose host left the replay on. If a Space has no replay, record it and use the Audio/Video tab.
+          </p>
+          {transcribing && (
+            <p className="text-sm text-gray-500">
+              Downloading the replay and transcribing locally with Whisper. Long Spaces can take several minutes.
+            </p>
+          )}
+          {transcript && (
+            <>
+              <p className="text-xs text-gray-500">Transcript from the Space, edit if needed (fix speaker names and quotes before drafting):</p>
               <textarea
                 value={transcript}
                 onChange={(e) => setTranscript(e.target.value)}

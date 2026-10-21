@@ -4,6 +4,7 @@ import { tmpdir } from "os";
 import path from "path";
 import { transcribeFile } from "@/lib/transcribe";
 import { getYoutubeTranscript } from "@/lib/youtube";
+import { getSpaceTranscript } from "@/lib/xspace";
 
 // Every route here reads request-time secrets (Firebase, Anthropic, xAI) or
 // request data — never build-time static content. Without this, Next.js
@@ -20,9 +21,12 @@ export async function POST(req: NextRequest) {
 
   try {
     if (contentType.includes("application/json")) {
-      const { youtubeUrl } = await req.json();
+      const { youtubeUrl, xSpaceUrl } = await req.json();
+      if (xSpaceUrl) {
+        return NextResponse.json(await getSpaceTranscript(String(xSpaceUrl)));
+      }
       if (!youtubeUrl) {
-        return NextResponse.json({ error: "youtubeUrl is required" }, { status: 400 });
+        return NextResponse.json({ error: "youtubeUrl or xSpaceUrl is required" }, { status: 400 });
       }
       const result = await getYoutubeTranscript(youtubeUrl);
       return NextResponse.json(result);

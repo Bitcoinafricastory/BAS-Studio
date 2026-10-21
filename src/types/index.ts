@@ -59,7 +59,7 @@ export interface Draft {
   createdAt: string;
   updatedAt: string;
   sourceMaterial: {
-    kind: "notes" | "youtube" | "audio";
+    kind: "notes" | "youtube" | "audio" | "xspace";
     raw: string;
   };
 }
