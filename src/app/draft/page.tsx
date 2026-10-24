@@ -3,10 +3,11 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Page, PageHeader, ErrorBanner } from "@/components/ui/Page";
-import { FileText, Youtube, Mic, Radio, Loader2, Sparkles, Upload } from "lucide-react";
+import { FileText, Youtube, Mic, Radio, CircleDot, Loader2, Sparkles, Upload } from "lucide-react";
+import Recorder from "@/components/draft/Recorder";
 import type { Draft } from "@/types";
 
-type Mode = "notes" | "youtube" | "xspace" | "audio";
+type Mode = "notes" | "youtube" | "xspace" | "audio" | "record";
 
 export default function NewDraftPage() {
   const [mode, setMode] = useState<Mode>("notes");
@@ -134,13 +135,14 @@ export default function NewDraftPage() {
     <Page width="max-w-2xl">
       <PageHeader
         title="New Draft"
-        description="Turn notes, a YouTube video, an X Space or a recording into a draft in the BAS voice. You review it before anything is saved to the dashboard."
+        description="Turn notes, a YouTube video, an X Space, a live recording or an uploaded file into a draft in the BAS voice. You review it before anything is saved to the dashboard."
       />
 
       <div className="mb-5 flex w-fit items-center gap-1 rounded-full border border-gray-800 bg-gray-900/50 p-1">
         <ModeTab icon={FileText} label="Notes" active={mode === "notes"} onClick={() => setMode("notes")} />
         <ModeTab icon={Youtube} label="YouTube" active={mode === "youtube"} onClick={() => setMode("youtube")} />
         <ModeTab icon={Radio} label="X Space" active={mode === "xspace"} onClick={() => setMode("xspace")} />
+        <ModeTab icon={CircleDot} label="Record" active={mode === "record"} onClick={() => setMode("record")} />
         <ModeTab icon={Mic} label="Audio/Video" active={mode === "audio"} onClick={() => setMode("audio")} />
       </div>
 
@@ -230,6 +232,29 @@ export default function NewDraftPage() {
           {transcript && (
             <>
               <p className="text-xs text-gray-500">Transcript from the Space, edit if needed (fix speaker names and quotes before drafting):</p>
+              <textarea
+                value={transcript}
+                onChange={(e) => setTranscript(e.target.value)}
+                rows={10}
+                className="input resize-y rounded-2xl px-4 py-3 leading-relaxed"
+              />
+            </>
+          )}
+        </div>
+      )}
+
+      {mode === "record" && (
+        <div className="flex flex-col gap-3">
+          <Recorder
+            onTranscript={(t) => {
+              setTranscript(t);
+              setTranscribeMethod("whisper");
+            }}
+            onError={setError}
+          />
+          {transcript && (
+            <>
+              <p className="text-xs text-gray-500">Transcript. Edit it, add speaker names, then generate:</p>
               <textarea
                 value={transcript}
                 onChange={(e) => setTranscript(e.target.value)}
