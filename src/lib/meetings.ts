@@ -79,20 +79,20 @@ export async function readTranscript(id: string): Promise<string | null> {
 }
 
 /** Transcribes a meeting that was recorded earlier but has no transcript yet (for example, Whisper failed the first time). */
-export async function transcribeSaved(id: string) {
+export async function transcribeSaved(id: string, language?: string) {
   assertWritable();
   if (!ID_RE.test(id)) throw new Error("Invalid meeting id");
   const dir = path.join(meetingsDir(), id);
   const files = await readdir(dir).catch(() => [] as string[]);
   const audio = files.find((f) => /^audio\.[a-z0-9]{2,5}$/i.test(f));
   if (!audio) throw new Error("No audio file was found in that meeting’s folder.");
-  const text = await transcribeFile(path.join(dir, audio));
+  const text = await transcribeFile(path.join(dir, audio), language);
   await writeFile(path.join(dir, "transcript.txt"), text + "\n");
   await rm(path.join(dir, audio.replace(/\.[^.]+$/, ".txt")), { force: true });
   return { id, text };
 }
 
-export async function saveAndTranscribe(audio: Buffer, ext: string, title: string) {
+export async function saveAndTranscribe(audio: Buffer, ext: string, title: string, language?: string) {
   assertWritable();
   const id = makeId(title);
   const dir = path.join(meetingsDir(), id);
@@ -102,7 +102,7 @@ export async function saveAndTranscribe(audio: Buffer, ext: string, title: strin
   // The audio is written first, so a failed transcription never loses the recording.
   await writeFile(audioPath, audio);
   try {
-    const text = await transcribeFile(audioPath);
+    const text = await transcribeFile(audioPath, language);
     await writeFile(path.join(dir, "transcript.txt"), text + "\n");
     await rm(path.join(dir, "audio.txt"), { force: true });
     return { id, text, dir };

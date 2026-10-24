@@ -26,6 +26,7 @@ export default function Recorder({
   onError: (message: string) => void;
 }) {
   const [title, setTitle] = useState("");
+  const [language, setLanguage] = useState("en");
   const [withTab, setWithTab] = useState(false);
   const [phase, setPhase] = useState<"idle" | "recording" | "paused" | "recorded" | "transcribing">("idle");
   const [seconds, setSeconds] = useState(0);
@@ -149,6 +150,7 @@ export default function Recorder({
       const ext = blob.type.includes("mp4") ? ".m4a" : ".webm";
       form.append("file", blob, `meeting${ext}`);
       form.append("title", title.trim());
+      form.append("language", language);
       const res = await fetch("/api/meetings", { method: "POST", body: form });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Transcription failed");
@@ -182,7 +184,7 @@ export default function Recorder({
       const res = await fetch("/api/meetings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id, language }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Transcription failed");
@@ -216,6 +218,24 @@ export default function Recorder({
           className="input"
           maxLength={80}
         />
+
+        <label className="flex items-center gap-2 text-sm text-gray-400">
+          Spoken language
+          <select
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+            disabled={phase === "transcribing"}
+            className="input w-auto py-1.5"
+            aria-label="Spoken language"
+          >
+            <option value="en">English</option>
+            <option value="fr">French</option>
+            <option value="sw">Swahili</option>
+            <option value="pt">Portuguese</option>
+            <option value="ar">Arabic</option>
+            <option value="auto">Detect automatically</option>
+          </select>
+        </label>
 
         {(phase === "idle" || phase === "recorded") && (
           <label className="flex items-start gap-2.5 text-sm text-gray-400">

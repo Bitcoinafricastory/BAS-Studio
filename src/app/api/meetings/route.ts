@@ -24,14 +24,15 @@ export async function POST(req: NextRequest) {
   try {
     // JSON body {id}: transcribe a recording that's already saved but has no transcript.
     if ((req.headers.get("content-type") || "").includes("application/json")) {
-      const { id } = await req.json();
-      return NextResponse.json({ ...(await transcribeSaved(String(id || ""))), method: "whisper" });
+      const { id, language } = await req.json();
+      return NextResponse.json({ ...(await transcribeSaved(String(id || ""), language ? String(language) : undefined)), method: "whisper" });
     }
     const form = await req.formData();
     const file = form.get("file") as File | null;
     if (!file) return NextResponse.json({ error: "file is required" }, { status: 400 });
     const title = String(form.get("title") || "").slice(0, 80);
-    const result = await saveAndTranscribe(Buffer.from(await file.arrayBuffer()), path.extname(file.name) || ".webm", title);
+    const language = form.get("language") ? String(form.get("language")) : undefined;
+    const result = await saveAndTranscribe(Buffer.from(await file.arrayBuffer()), path.extname(file.name) || ".webm", title, language);
     return NextResponse.json({ id: result.id, text: result.text, folder: result.dir, method: "whisper" });
   } catch (err: any) {
     console.error("Meeting error:", err);

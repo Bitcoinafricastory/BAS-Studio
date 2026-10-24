@@ -31,16 +31,22 @@ export function cleanWhisperError(stderr: string): string {
  * Optional env vars (in .env.local):
  *   WHISPER_BIN       full path to the whisper command, if the one Studio finds isn't yours
  *   WHISPER_MODEL     tiny | base | small | medium | large (default: base)
- *   WHISPER_LANGUAGE  e.g. en, fr, sw. Skips language detection, which is faster and steadier
+ *   WHISPER_LANGUAGE  default language, e.g. en, fr, sw (default: en). Use "auto" to let Whisper guess.
+ *                     Guessing goes wrong on short, quiet or noisy clips (it can pick French for English).
  */
-export async function transcribeFile(filePath: string): Promise<string> {
+export const LANGUAGE_RE = /^(auto|[a-z]{2,3})$/;
+
+export async function transcribeFile(filePath: string, language?: string): Promise<string> {
   const dir = path.dirname(filePath);
   const base = path.basename(filePath, path.extname(filePath));
   const bin = process.env.WHISPER_BIN || "whisper";
   const model = process.env.WHISPER_MODEL || "base";
 
   const args = [filePath, "--model", model, "--output_format", "txt", "--output_dir", dir, "--fp16", "False"];
-  if (process.env.WHISPER_LANGUAGE) args.push("--language", process.env.WHISPER_LANGUAGE);
+  // BAS writes in English, so English is the default. Whisper's own guess comes from the first
+  // 30 seconds only, and on a quiet or short clip it can pick the wrong language entirely.
+  const lang = (language || process.env.WHISPER_LANGUAGE || "en").toLowerCase();
+  if (LANGUAGE_RE.test(lang) && lang !== "auto") args.push("--language", lang);
 
   try {
     // execFile, not exec: no shell, so file names can't break the command.
