@@ -174,6 +174,27 @@ export default function Recorder({
     }
   }
 
+  const [busyId, setBusyId] = useState("");
+  async function transcribeSaved(id: string) {
+    setBusyId(id);
+    onError("");
+    try {
+      const res = await fetch("/api/meetings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Transcription failed");
+      onTranscript(data.text);
+      loadSaved();
+    } catch (err: any) {
+      onError(err.message);
+    } finally {
+      setBusyId("");
+    }
+  }
+
   function discard() {
     setBlob(null);
     setPreviewUrl("");
@@ -269,9 +290,16 @@ export default function Recorder({
                   <span className="block truncate text-sm text-gray-200">{m.title}</span>
                   <span className="block text-xs text-gray-600">{m.createdAt ? new Date(m.createdAt).toLocaleString() : ""}</span>
                 </span>
-                <button type="button" disabled={!m.hasTranscript} onClick={() => openSaved(m.id)} className="btn-ghost shrink-0 disabled:opacity-40">
-                  {m.hasTranscript ? "Open transcript" : "No transcript"}
-                </button>
+                {m.hasTranscript ? (
+                  <button type="button" onClick={() => openSaved(m.id)} className="btn-ghost shrink-0">
+                    Open transcript
+                  </button>
+                ) : (
+                  <button type="button" disabled={busyId === m.id} onClick={() => transcribeSaved(m.id)} className="btn-secondary shrink-0">
+                    {busyId === m.id ? <Loader2 size={13} className="animate-spin" /> : null}
+                    {busyId === m.id ? "Transcribing…" : "Transcribe"}
+                  </button>
+                )}
               </li>
             ))}
           </ul>

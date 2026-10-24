@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
-import { listMeetings, readTranscript, saveAndTranscribe } from "@/lib/meetings";
+import { listMeetings, readTranscript, saveAndTranscribe, transcribeSaved } from "@/lib/meetings";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -22,6 +22,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    // JSON body {id}: transcribe a recording that's already saved but has no transcript.
+    if ((req.headers.get("content-type") || "").includes("application/json")) {
+      const { id } = await req.json();
+      return NextResponse.json({ ...(await transcribeSaved(String(id || ""))), method: "whisper" });
+    }
     const form = await req.formData();
     const file = form.get("file") as File | null;
     if (!file) return NextResponse.json({ error: "file is required" }, { status: 400 });
