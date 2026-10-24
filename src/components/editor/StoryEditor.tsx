@@ -11,11 +11,14 @@
 // fonts, and formats are byte-for-byte the same as the site version. This is what powers
 // the highlight-to-improve bubble and dictation on this screen.
 
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-import dynamic from 'next/dynamic';
+import { forwardRef, useImperativeHandle, useRef } from 'react';
+import ReactQuillBase, { Quill } from 'react-quill-new';
 import 'react-quill-new/dist/quill.snow.css';
 
-const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false }) as any;
+// next/dynamic does not pass refs through, so a dynamic ReactQuill would leave the ref empty and
+// getQuill() would return null (which silently broke Improve and dictation). This file is only
+// ever loaded in the browser (the Edit page imports it with ssr: false), so a plain import is safe.
+const ReactQuill = ReactQuillBase as any;
 
 const fontSizeArr = ['10px', '12px', '14px', '16px', '18px', '20px', '24px', '30px', '36px', '48px'];
 
@@ -140,6 +143,15 @@ const darkStyles = `
 .bas-quill-dark .ql-toolbar .ql-picker-label { border-color: transparent; }
 `;
 
+// Register the named fonts with Quill's Parchment, once per page load.
+try {
+  const Font = Quill.import('attributors/class/font') as any;
+  Font.whitelist = FONT_WHITELIST;
+  Quill.register(Font, true);
+} catch {
+  // Registration is safe to skip on hot reload.
+}
+
 export interface StoryEditorHandle {
   getQuill: () => any;
 }
@@ -156,25 +168,6 @@ const StoryEditor = forwardRef<StoryEditorHandle, StoryEditorProps>(function Sto
   ref
 ) {
   const quillRef = useRef<any>(null);
-
-  // Register the named fonts with Quill's Parchment. Must run only on the
-  // client (Quill imports break during SSR) and only once per page load.
-  useEffect(() => {
-    let cancelled = false;
-    import('react-quill-new').then((mod) => {
-      if (cancelled) return;
-      const Quill = mod.Quill || (mod.default && mod.default.Quill);
-      if (!Quill) return;
-      try {
-        const Font = Quill.import('attributors/class/font') as any;
-        Font.whitelist = FONT_WHITELIST;
-        Quill.register(Font, true);
-      } catch {
-        // Registration is idempotent-safe to fail silently on hot reload.
-      }
-    });
-    return () => { cancelled = true; };
-  }, []);
 
   useImperativeHandle(ref, () => ({
     getQuill: () => quillRef.current?.getEditor?.() || null,

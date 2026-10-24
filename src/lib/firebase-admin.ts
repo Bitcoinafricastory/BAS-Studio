@@ -13,7 +13,14 @@ function getAdminApp(): App {
     );
   }
 
-  const serviceAccount = JSON.parse(raw);
+  let serviceAccount: any;
+  try {
+    serviceAccount = JSON.parse(raw);
+  } catch {
+    throw new Error(
+      "FIREBASE_SERVICE_ACCOUNT_KEY isn’t valid JSON. Paste the whole contents of the downloaded service account file, starting with { and ending with }, with no extra quotes around it."
+    );
+  }
   // Handle escaped newlines in the private key when pasted as a single-line env var
   if (serviceAccount.private_key) {
     serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, "\n");

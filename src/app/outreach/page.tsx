@@ -531,7 +531,7 @@ function CardHead({ title, chip }: { title: string; chip?: string }) {
 function Stat({ ring, label, value, of, sub }: { ring?: React.ReactNode; label: string; value: number; of?: number; sub: string }) {
   return (
     <div className="card flex items-center gap-3 px-4 py-3">
-      {ring}
+      <span className="hidden sm:block">{ring}</span>
       <div className="min-w-0">
         <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{label}</div>
         <div className="text-2xl font-semibold leading-tight text-gray-50">

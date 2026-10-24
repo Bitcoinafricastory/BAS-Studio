@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAnthropic, DEFAULT_MODEL } from "@/lib/anthropic";
 import { passageSystemPrompt, lintWording } from "@/lib/voice";
+import { requireAuth } from "@/lib/auth";
 
 // Every route here reads request-time secrets (Firebase, Anthropic, xAI) or
 // request data — never build-time static content. Without this, Next.js
@@ -18,6 +19,9 @@ function textOf(response: any): string {
 }
 
 export async function POST(req: NextRequest) {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   try {
     const { selectedText, context } = await req.json();
     if (!selectedText || !selectedText.trim()) {

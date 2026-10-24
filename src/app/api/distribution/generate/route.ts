@@ -3,6 +3,7 @@ import { loadArticle } from "@/lib/distribution/article";
 import { generateVariant } from "@/lib/distribution/generate";
 import { OUTPUT_SPECS } from "@/lib/distribution/outputs";
 import type { OutputId } from "@/lib/distribution/types";
+import { requireAuth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -10,6 +11,9 @@ export const maxDuration = 60;
 // One call per output so each stays well inside the function time limit. The browser
 // fires these in parallel and fills each card as its result arrives.
 export async function POST(req: NextRequest) {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   try {
     const { articleId, output, factSheet, author, angle, variants } = await req.json();
     if (!articleId || !output || !factSheet || !author?.name || !author?.xHandle) {

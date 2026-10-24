@@ -19,6 +19,7 @@ const merriweather = Merriweather({ subsets: ["latin"], weight: "400", variable:
 export const metadata: Metadata = {
   title: "BAS Studio",
   description: "Internal drafting tool for Bitcoin Africa Story",
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({
@@ -35,7 +36,7 @@ export default function RootLayout({
         <PasscodeGate>
           <div className="flex min-h-screen">
             <IconRail />
-            <main className="flex-1 min-w-0">{children}</main>
+            <main className="flex-1 min-w-0 pb-[calc(4rem+env(safe-area-inset-bottom))] sm:pb-0">{children}</main>
           </div>
         </PasscodeGate>
       </body>

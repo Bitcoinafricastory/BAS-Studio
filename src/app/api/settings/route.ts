@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase-admin";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
+import { requireAuth } from "@/lib/auth";
 
 // Every route here reads request-time secrets (Firebase, Anthropic, xAI) or
 // request data — never build-time static content. Without this, Next.js
@@ -14,6 +15,9 @@ const SECRETS_DOC = "secrets";
 
 // Never returns actual secret values — only enough for the UI to show status.
 export async function GET() {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   try {
     const db = getAdminDb();
     const snap = await db.collection(SETTINGS_COLLECTION).doc(SECRETS_DOC).get();
@@ -67,6 +71,9 @@ const FIELD_LABEL: Record<Field, string> = {
 };
 
 export async function POST(req: NextRequest) {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   try {
     const body = await req.json();
     const entry = (Object.entries(body) as [Field, string][]).find(([, v]) => typeof v === "string");
@@ -101,6 +108,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   try {
     const { searchParams } = new URL(req.url);
     const field = searchParams.get("field") as Field | null;

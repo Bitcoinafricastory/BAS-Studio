@@ -1,12 +1,12 @@
 import { YoutubeTranscript } from "youtube-transcript";
-import { exec as execCb } from "child_process";
+import { execFile as execFileCb } from "child_process";
 import { promisify } from "util";
 import { mkdtemp, rm } from "fs/promises";
 import { tmpdir } from "os";
 import path from "path";
 import { transcribeFile } from "./transcribe";
 
-const exec = promisify(execCb);
+const execFile = promisify(execFileCb);
 
 export interface YoutubeTranscriptResult {
   text: string;
@@ -14,6 +14,13 @@ export interface YoutubeTranscriptResult {
 }
 
 export async function getYoutubeTranscript(url: string): Promise<YoutubeTranscriptResult> {
+  // The address is passed to a program, so only a plain web address is allowed through.
+  try {
+    const u = new URL(url);
+    if (u.protocol !== "http:" && u.protocol !== "https:") throw new Error("protocol");
+  } catch {
+    throw new Error("That doesn’t look like a web address. Paste the full YouTube link, starting with https://");
+  }
   // Fast path: most videos already have captions — no download or transcription needed.
   try {
     const segments = await YoutubeTranscript.fetchTranscript(url);
@@ -32,7 +39,8 @@ export async function getYoutubeTranscript(url: string): Promise<YoutubeTranscri
   const audioPath = path.join(dir, "audio.mp3");
   try {
     try {
-      await exec(`yt-dlp -x --audio-format mp3 -o "${audioPath}" "${url}"`, {
+      // execFile with an argument list: the link is never read by a shell, so quotes or ; in it can't run commands.
+      await execFile("yt-dlp", ["-x", "--audio-format", "mp3", "-o", audioPath, "--", url], {
         maxBuffer: 1024 * 1024 * 50,
       });
     } catch (err: any) {

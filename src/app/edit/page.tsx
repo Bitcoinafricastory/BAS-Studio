@@ -11,7 +11,19 @@ import Link from "next/link";
 import { Page, EmptyState, ErrorBanner } from "@/components/ui/Page";
 import DictationButton from "@/components/editor/DictationButton";
 
-const StoryEditor = dynamic(() => import("@/components/editor/StoryEditor"), { ssr: false });
+// next/dynamic drops refs, so the editor handle is passed as an ordinary prop (editorRef) and
+// attached to the real editor inside this wrapper. Without this the handle was always empty and
+// Improve and dictation did nothing.
+const StoryEditor = dynamic(
+  () =>
+    import("@/components/editor/StoryEditor").then((mod) => {
+      const Editor = mod.default;
+      return function StoryEditorWithHandle({ editorRef, ...props }: any) {
+        return <Editor ref={editorRef} {...props} />;
+      };
+    }),
+  { ssr: false }
+) as any;
 const ImageUploader = dynamic(() => import("@/components/editor/ImageUploader"), { ssr: false });
 
 const PENDING_KEY = "bas-studio-pending-draft";
@@ -246,7 +258,7 @@ export default function EditSendPage() {
             </div>
           )}
           <StoryEditor
-            ref={editorRef}
+            editorRef={editorRef}
             value={form.content}
             onChange={(content: string) => update({ content })}
             onSelectionChange={handleSelectionChange}

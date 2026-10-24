@@ -494,7 +494,7 @@ function SearchBar({
             deepSearch ? "bg-bas-gold text-on-gold font-medium" : "bg-gray-700/60 text-gray-300 hover:text-gray-100"
           }`}
         >
-          <Search size={13} /> Deep Search
+          <Search size={13} /> <span className="hidden sm:inline">Deep Search</span>
         </button>
       ) : (
         <span

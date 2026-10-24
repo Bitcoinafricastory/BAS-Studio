@@ -2,11 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { loadArticle } from "@/lib/distribution/article";
 import { buildFactSheet } from "@/lib/distribution/factsheet";
 import { findAuthor, AUTHORS } from "@/lib/distribution/registry";
+import { requireAuth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   try {
     const { articleId } = await req.json();
     if (!articleId) return NextResponse.json({ error: "articleId is required" }, { status: 400 });

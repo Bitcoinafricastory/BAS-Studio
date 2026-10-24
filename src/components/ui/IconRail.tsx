@@ -32,6 +32,8 @@ const NAV: { href: string; label: string; icon: LucideIcon }[] = [
 
 const STORAGE_KEY = "bas-studio-rail-expanded";
 
+const MOBILE_LABEL: Record<string, string> = { "New Draft": "Draft", Distribute: "Share" };
+
 const THEME_CYCLE: ThemeMode[] = ["system", "light", "dark"];
 const THEME_META: Record<ThemeMode, { label: string; icon: LucideIcon }> = {
   system: { label: "System theme", icon: Monitor },
@@ -86,8 +88,9 @@ export default function IconRail() {
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
   return (
+    <>
     <aside
-      className={`sticky top-0 h-screen shrink-0 bg-black border-r border-gray-800 flex flex-col py-3 transition-[width] duration-200 ${
+      className={`sticky top-0 hidden h-screen shrink-0 bg-black border-r border-gray-800 sm:flex flex-col py-3 transition-[width] duration-200 ${
         expanded ? "w-52 px-3" : "w-[68px] px-2.5"
       }`}
     >
@@ -184,6 +187,40 @@ export default function IconRail() {
         </button>
       </div>
     </aside>
+
+    {/* Phones: the rail would eat a fifth of the screen, so navigation moves to a bottom bar. */}
+    <nav
+      aria-label="Main"
+      className="fixed inset-x-0 bottom-0 z-40 flex border-t border-gray-800 bg-black pb-[env(safe-area-inset-bottom)] sm:hidden"
+    >
+      {[...NAV, { href: "/settings", label: "Settings", icon: Settings }].map(({ href, label, icon: Icon }) => {
+        const active = isActive(href);
+        return (
+          <Link
+            key={href}
+            href={href}
+            aria-label={label}
+            aria-current={active ? "page" : undefined}
+            className={`flex min-w-0 flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors focus-ring ${
+              active ? "text-gold-fg" : "text-gray-500"
+            }`}
+          >
+            <Icon size={20} strokeWidth={active ? 2.25 : 1.75} />
+            <span className="max-w-full truncate">{MOBILE_LABEL[label] ?? label}</span>
+          </Link>
+        );
+      })}
+      <button
+        type="button"
+        onClick={cycleTheme}
+        aria-label={THEME_META[mode].label}
+        className="flex min-w-0 flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium text-gray-500 focus-ring"
+      >
+        <ThemeIcon size={20} strokeWidth={1.75} />
+        <span>Theme</span>
+      </button>
+    </nav>
+    </>
   );
 }
 

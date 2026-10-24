@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase-admin";
 import type { ChatMessage } from "@/types/chat";
+import { requireAuth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +45,9 @@ function deriveTitle(messages: ChatMessage[]): string {
 }
 
 export async function GET(req: NextRequest) {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   try {
     const db = getAdminDb();
     const id = req.nextUrl.searchParams.get("id");
@@ -85,6 +89,9 @@ export async function GET(req: NextRequest) {
 // Create or update a chat. The browser picks the id, so two quick saves can never create
 // two documents for the same conversation.
 export async function POST(req: NextRequest) {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   try {
     const { id, messages, provider } = await req.json();
     if (!ID_RE.test(String(id))) return NextResponse.json({ error: "Invalid chat id" }, { status: 400 });
@@ -111,6 +118,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   try {
     const { id, title } = await req.json();
     const t = String(title ?? "").replace(/\s+/g, " ").trim().slice(0, 100);
@@ -124,6 +134,9 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   try {
     const id = req.nextUrl.searchParams.get("id") || "";
     if (!ID_RE.test(id)) return NextResponse.json({ error: "Invalid chat id" }, { status: 400 });

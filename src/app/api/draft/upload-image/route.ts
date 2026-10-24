@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminBucket } from "@/lib/firebase-admin";
+import { requireAuth } from "@/lib/auth";
 
 // Every route here reads request-time secrets (Firebase, Anthropic, xAI) or
 // request data — never build-time static content. Without this, Next.js
@@ -11,6 +12,9 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   try {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
@@ -25,7 +29,19 @@ export async function POST(req: NextRequest) {
     }
 
     const bucket = getAdminBucket();
-    const ext = file.name.split(".").pop() || "jpg";
+    // The extension comes from the verified type, never from the file name, which could contain
+    // path pieces ("x.png/../../other") and write somewhere unintended in the bucket.
+    const EXT: Record<string, string> = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+      "image/gif": "gif",
+      "image/avif": "avif",
+    };
+    const ext = EXT[file.type];
+    if (!ext) {
+      return NextResponse.json({ error: "Use a JPG, PNG, WebP, GIF or AVIF image" }, { status: 400 });
+    }
     const path = `news/featured_${Date.now()}.${ext}`;
     const buffer = Buffer.from(await file.arrayBuffer());
 

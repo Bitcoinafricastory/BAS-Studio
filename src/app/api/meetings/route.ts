@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import { listMeetings, readTranscript, saveAndTranscribe, transcribeSaved } from "@/lib/meetings";
+import { requireAuth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
 export async function GET(req: NextRequest) {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   try {
     const id = req.nextUrl.searchParams.get("id");
     if (id) {
@@ -21,6 +25,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   try {
     // JSON body {id}: transcribe a recording that's already saved but has no transcript.
     if ((req.headers.get("content-type") || "").includes("application/json")) {

@@ -5,6 +5,7 @@ import path from "path";
 import { transcribeFile } from "@/lib/transcribe";
 import { getYoutubeTranscript } from "@/lib/youtube";
 import { getSpaceTranscript } from "@/lib/xspace";
+import { requireAuth } from "@/lib/auth";
 
 // Every route here reads request-time secrets (Firebase, Anthropic, xAI) or
 // request data — never build-time static content. Without this, Next.js
@@ -17,6 +18,9 @@ export const runtime = "nodejs";
 export const maxDuration = 300; // local transcription can take a while
 
 export async function POST(req: NextRequest) {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   const contentType = req.headers.get("content-type") || "";
 
   try {
@@ -40,7 +44,8 @@ export async function POST(req: NextRequest) {
       }
 
       const dir = await mkdtemp(path.join(tmpdir(), "bas-upload-"));
-      const ext = path.extname(file.name) || ".mp3";
+      const rawExt = path.extname(file.name).toLowerCase();
+      const ext = /^\.[a-z0-9]{1,5}$/.test(rawExt) ? rawExt : ".mp3";
       const filePath = path.join(dir, `audio${ext}`);
       const buffer = Buffer.from(await file.arrayBuffer());
       await writeFile(filePath, buffer);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { DEFAULT_SOURCES } from "@/lib/sources";
 import type { Source } from "@/types";
+import { requireAuth } from "@/lib/auth";
 
 // Every route here reads request-time secrets (Firebase, Anthropic, xAI) or
 // request data — never build-time static content. Without this, Next.js
@@ -11,6 +12,9 @@ export const dynamic = "force-dynamic";
 
 
 export async function GET() {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   try {
     const db = getAdminDb();
     const snap = await db.collection("sources").get();
@@ -36,10 +40,23 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   try {
-    const { label, url, type } = await req.json();
+    const body = await req.json();
+    const label = typeof body.label === "string" ? body.label.trim() : "";
+    const url = typeof body.url === "string" ? body.url.trim() : "";
+    const type = body.type;
     if (!label || !url || !type) {
       return NextResponse.json({ error: "label, url, and type are required" }, { status: 400 });
+    }
+    // The server fetches this address, so only real web addresses are accepted.
+    try {
+      const u = new URL(url);
+      if (u.protocol !== "http:" && u.protocol !== "https:") throw new Error("protocol");
+    } catch {
+      return NextResponse.json({ error: "That doesn’t look like a web address. Start it with https://" }, { status: 400 });
     }
     const db = getAdminDb();
     const ref = await db.collection("sources").add({ label, url, type, active: true });
@@ -51,6 +68,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   try {
     const { id, active } = await req.json();
     if (!id || typeof active !== "boolean") {
@@ -66,6 +86,9 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");

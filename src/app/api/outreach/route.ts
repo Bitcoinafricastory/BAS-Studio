@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { applyAction, findOrg, isStatus, SEED_PROGRESS } from "@/lib/outreach/state";
 import type { History, OutreachAction, Progress, ProgressMap } from "@/lib/outreach/types";
+import { requireAuth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,9 @@ function toProgress(d: any): Progress {
 }
 
 export async function GET() {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   try {
     const snap = await getAdminDb().collection(COLLECTION).get();
     // Progress carried over from the old tracker shows until the first edit writes its own doc.
@@ -36,6 +40,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const denied = await requireAuth();
+  if (denied) return denied;
+
   try {
     const body = (await req.json()) as Partial<OutreachAction> & { status?: unknown; note?: unknown };
     const slug = String(body.slug || "");
