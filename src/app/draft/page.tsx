@@ -26,6 +26,12 @@ export default function NewDraftPage() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [error, setError] = useState("");
 
+  // Switching tabs clears the last error, so a failure from one tab doesn't follow you to another.
+  const pickMode = (m: Mode) => {
+    setMode(m);
+    setError("");
+  };
+
   const sourceMaterial = mode === "notes" ? notes : transcript;
 
   // "Draft from this" on a lead arrives with the lead's details as ?notes=.
@@ -139,11 +145,11 @@ export default function NewDraftPage() {
       />
 
       <div className="mb-5 flex w-fit items-center gap-1 rounded-full border border-gray-800 bg-gray-900/50 p-1">
-        <ModeTab icon={FileText} label="Notes" active={mode === "notes"} onClick={() => setMode("notes")} />
-        <ModeTab icon={Youtube} label="YouTube" active={mode === "youtube"} onClick={() => setMode("youtube")} />
-        <ModeTab icon={Radio} label="X Space" active={mode === "xspace"} onClick={() => setMode("xspace")} />
-        <ModeTab icon={CircleDot} label="Record" active={mode === "record"} onClick={() => setMode("record")} />
-        <ModeTab icon={Mic} label="Audio/Video" active={mode === "audio"} onClick={() => setMode("audio")} />
+        <ModeTab icon={FileText} label="Notes" active={mode === "notes"} onClick={() => pickMode("notes")} />
+        <ModeTab icon={Youtube} label="YouTube" active={mode === "youtube"} onClick={() => pickMode("youtube")} />
+        <ModeTab icon={Radio} label="X Space" active={mode === "xspace"} onClick={() => pickMode("xspace")} />
+        <ModeTab icon={CircleDot} label="Record" active={mode === "record"} onClick={() => pickMode("record")} />
+        <ModeTab icon={Mic} label="Audio/Video" active={mode === "audio"} onClick={() => pickMode("audio")} />
       </div>
 
       {mode === "notes" && (
