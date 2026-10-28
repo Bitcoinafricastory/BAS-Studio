@@ -12,6 +12,7 @@ import {
   Rss,
   Share2,
   Link2,
+  Mail,
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
@@ -26,13 +27,14 @@ const NAV: { href: string; label: string; icon: LucideIcon }[] = [
   { href: "/leads", label: "Leads", icon: Newspaper },
   { href: "/draft", label: "New Draft", icon: SquarePen },
   { href: "/distribute", label: "Distribute", icon: Share2 },
+  { href: "/newsletter", label: "Newsletter", icon: Mail },
   { href: "/outreach", label: "Outreach", icon: Link2 },
   { href: "/sources", label: "Sources", icon: Rss },
 ];
 
 const STORAGE_KEY = "bas-studio-rail-expanded";
 
-const MOBILE_LABEL: Record<string, string> = { "New Draft": "Draft", Distribute: "Share" };
+const MOBILE_LABEL: Record<string, string> = { "New Draft": "Draft", Distribute: "Share", Newsletter: "News" };
 
 const THEME_CYCLE: ThemeMode[] = ["system", "light", "dark"];
 const THEME_META: Record<ThemeMode, { label: string; icon: LucideIcon }> = {
