@@ -69,8 +69,16 @@ export default function PasscodeGate({ children }: { children: React.ReactNode }
     window.fetch = async (...args) => {
       const res = await original(...args);
       if (res.status === 401) {
-        const url = typeof args[0] === "string" ? args[0] : args[0] instanceof URL ? args[0].pathname : (args[0] as Request).url;
-        if (/\/api\//.test(url) && !/\/api\/auth\//.test(url)) {
+        // Only Studio's own API counts. Other scripts on the page (Vercel's preview toolbar, for
+        // one) make their own requests to addresses containing /api/, and a refusal from them
+        // used to lock Studio a second after signing in.
+        const raw = typeof args[0] === "string" ? args[0] : args[0] instanceof URL ? args[0].href : (args[0] as Request).url;
+        let url: URL | null = null;
+        try {
+          url = new URL(raw, window.location.href);
+        } catch {}
+        if (url && url.origin === window.location.origin && url.pathname.startsWith("/api/") && !url.pathname.startsWith("/api/auth/")) {
+          console.warn("BAS Studio: signed out after a refused request to", url.pathname);
           setError("Your session ended. Enter the passcode to continue.");
           setStatus("locked");
         }
