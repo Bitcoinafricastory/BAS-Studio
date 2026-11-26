@@ -21,7 +21,18 @@ export async function GET() {
       ? {
           cookie: explainSessionToken(cookies().get(SESSION_COOKIE)?.value),
           keySource: secretSource(),
-          instance: process.env.AWS_LAMBDA_LOG_STREAM_NAME ? "lambda" : "other",
+          // Present / empty / missing for each setting, by name only. Never the values.
+          env: Object.fromEntries(
+            [
+              "SESSION_SECRET",
+              "FIREBASE_SERVICE_ACCOUNT_KEY",
+              "BAS_STUDIO_PASSCODE",
+              "ANTHROPIC_API_KEY",
+              "XAI_API_KEY",
+              "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
+            ].map((k) => [k, k in process.env ? (process.env[k] ? "present" : "empty") : "missing"])
+          ),
+          gitBranch: process.env.VERCEL_GIT_COMMIT_REF || "",
         }
       : undefined;
 
