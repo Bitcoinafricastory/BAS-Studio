@@ -29,6 +29,24 @@ export function createSessionToken(now = Date.now()): string {
   return `${payload}.${sign(payload)}`;
 }
 
+/** Which key signs cookies, by name only, for the preview diagnostic. Never the key itself. */
+export function secretSource(): "SESSION_SECRET" | "FIREBASE_SERVICE_ACCOUNT_KEY" | "random-per-instance" {
+  if (process.env.SESSION_SECRET) return "SESSION_SECRET";
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) return "FIREBASE_SERVICE_ACCOUNT_KEY";
+  return "random-per-instance";
+}
+
+/** Why a token was rejected, for the preview diagnostic. */
+export function explainSessionToken(token: string | undefined, now = Date.now()): string {
+  if (!token) return "no cookie received";
+  const parts = token.split(".");
+  if (parts.length !== 3 || parts[0] !== "v1") return "cookie has the wrong shape";
+  const expected = Buffer.from(sign(`${parts[0]}.${parts[1]}`));
+  const given = Buffer.from(parts[2]);
+  if (expected.length !== given.length || !timingSafeEqual(expected, given)) return "signature does not match this server's key";
+  return Number(parts[1]) > now ? "valid" : "expired";
+}
+
 export function verifySessionToken(token: string | undefined, now = Date.now()): boolean {
   if (!token) return false;
   const parts = token.split(".");

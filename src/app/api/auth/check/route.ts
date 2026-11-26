@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { canCreatePasscodeHere, getPasscode, missingPasscodeMessage } from "@/lib/passcode";
-import { SESSION_COOKIE, verifySessionToken } from "@/lib/auth";
+import { SESSION_COOKIE, explainSessionToken, secretSource, verifySessionToken } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -14,8 +14,19 @@ export async function GET() {
     return NextResponse.json({ ok: true });
   }
 
+  // On Vercel preview copies only: say why the cookie was rejected and which key source is in
+  // use (its name, never its value), to diagnose sign-ins that don't stick.
+  const debug =
+    process.env.VERCEL_ENV === "preview"
+      ? {
+          cookie: explainSessionToken(cookies().get(SESSION_COOKIE)?.value),
+          keySource: secretSource(),
+          instance: process.env.AWS_LAMBDA_LOG_STREAM_NAME ? "lambda" : "other",
+        }
+      : undefined;
+
   try {
-    if (await getPasscode()) return NextResponse.json({ ok: false });
+    if (await getPasscode()) return NextResponse.json({ ok: false, debug });
     return NextResponse.json({
       ok: false,
       setup: canCreatePasscodeHere() ? "here" : "environment",
