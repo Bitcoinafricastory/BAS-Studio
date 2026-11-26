@@ -1,4 +1,5 @@
 import type { OutputId } from "./types";
+import { THREAD_LINES } from "./registry";
 
 export interface OutputSpec {
   id: OutputId;
@@ -8,58 +9,76 @@ export interface OutputSpec {
   optional: boolean;
   template: string;
   note: string; // shown to the model alongside the template
+  howToPost?: string; // shown to the editor on the card
 }
 
 export const OUTPUT_SPECS: Record<OutputId, OutputSpec> = {
   x_bas_post: {
     id: "x_bas_post",
-    label: "X post",
-    account: "BAS on X",
+    label: "Main post",
+    account: "@btcafricastory",
     platform: "x",
     optional: false,
     note:
-      "Posted from @btcafricastory, which has X Premium, so long posts are fine (aim for 400 to 1,000 characters). The link never goes in the post body; it goes in the first comment.",
-    template: `{Hook: the news or the human moment, one or two short sentences}
+      "The first post of the BAS thread, in the third person. At most 280 characters, counted the way X counts them, unless you are told the account has Premium. Tell the story with every named person and project tagged on first mention as Name (@handle), using only handles from the registry or the fact sheet. No link: it goes in Reply 1. Never put a price, deadline pressure, a teaser header or every point of the article in the main post.",
+    template: `{The story in two or three connected sentences: who, what, where, with the key number. Tag people and projects on first mention.}
 
-{Context: who, where, when, with the key numbers. Tag people and projects on first mention as Name (@handle).}
-
-{Why it matters: one sentence}
-
-{What's next: a date, a place or the open question}
-
-Check the first comment to read the full story. 👇`,
+${THREAD_LINES.mainPostEnd}`,
+    howToPost: "Post from @btcafricastory with the featured image or video attached.",
   },
   x_bas_comment: {
     id: "x_bas_comment",
-    label: "X first comment",
-    account: "BAS on X",
+    label: "Reply 1: the link",
+    account: "@btcafricastory",
+    platform: "x",
+    optional: false,
+    note: "Written by Studio from the fixed BAS wording, not by the model.",
+    template: `${THREAD_LINES.replyLatest("{author_x_handle}")}
+{url}`,
+    howToPost: "Reply to the main post with this.",
+  },
+  x_bas_action: {
+    id: "x_bas_action",
+    label: "Reply 2: one action",
+    account: "@btcafricastory",
     platform: "x",
     optional: false,
     note:
-      "The first comment under the BAS post. It carries the author credit and the link. When the article follows earlier coverage of the same subject, use the 'Read our latest story on {subject}' form.",
-    template: `Read the full story by @{author_x_handle} 👇
-{url}
-
-(When the article follows earlier coverage of the same subject: Read our latest story on {subject} by @{author_x_handle} 👇)`,
+      "A reply under Reply 1, in the third person. One thing the reader can do (book, apply, donate, buy tickets, watch, read the source) or one related link, from the LINKS IN THE ARTICLE list only. One link, no more. At most 280 characters. If the list has nothing a reader can act on, write only: SKIP",
+    template: `{One plain sentence on the action, tagging the organiser if the registry or fact sheet has their handle}
+{one link from the article's link list}`,
+    howToPost: "Reply under Reply 1.",
+  },
+  x_bas_extra: {
+    id: "x_bas_extra",
+    label: "Reply 3: partners or apply link",
+    account: "@btcafricastory",
+    platform: "x",
+    optional: true,
+    note:
+      "An optional last reply: partners worth crediting, or a second apply or registration link, from the LINKS IN THE ARTICLE list only. At most 280 characters. If there is nothing to add beyond Reply 2, write only: SKIP",
+    template: `{Partners or a second link, in one or two plain sentences}`,
+    howToPost: "Reply under Reply 2, only if it adds something.",
   },
   x_author_post: {
     id: "x_author_post",
-    label: "X post (author)",
+    label: "Requote from the author",
     account: "Author's own X account",
     platform: "x",
     optional: false,
     note:
-      "At most 280 characters, counted the way X counts them (a link is 23), unless the author record says the account has Premium.",
-    template: `In my latest for @btcafricastory, I covered {the story in one line, with the key @handles}.
+      "The author quote-posts the BAS main post from their own account, in the first person. Take a different angle from the MAIN POST you are given: never repeat its sentences or lead with the same fact. Say plainly what the reader gets, keep jargon out, tag the subject and the projects. Make only personal claims the fact sheet supports. No link: it quotes the main post. At most 280 characters unless the author has Premium.",
+    template: `{One angle the main post did not use, in plain words, with what the reader gets and the key @handles}
 
-{url}`,
+${THREAD_LINES.requoteEnd}`,
+    howToPost: "Quote the BAS main post from your own account and paste this.",
   },
   li_bas_post: {
     id: "li_bas_post",
     label: "LinkedIn post",
     account: "BAS LinkedIn page",
     platform: "linkedin",
-    optional: false,
+    optional: true,
     note:
       "Up to 3,000 characters. The link goes inside the post, not in a comment. Fuller context than X: who co-hosted, one line of background on the organization, what came before. Names written in full, no @handles.",
     template: `{Hook sentence}
@@ -79,7 +98,7 @@ Read the full story by {author_name}: {url}
     label: "LinkedIn post (author)",
     account: "Author's LinkedIn profile",
     platform: "linkedin",
-    optional: false,
+    optional: true,
     note: "Up to 3,000 characters. First person. The link goes inside the post. No @handles.",
     template: `In my latest for Bitcoin Africa Story, I covered {what the story is about}.
 
@@ -91,35 +110,18 @@ Read the full story: {url}
 
 #Bitcoin #Africa #{Topic}`,
   },
-  x_thread: {
-    id: "x_thread",
-    label: "Two-post X thread",
-    account: "BAS on X",
-    platform: "x",
-    optional: true,
-    note:
-      "Write two posts separated by a line containing only ---. Post 1 is the story in the BAS post format with no link. Post 2 is one line on what readers will find, then 'Read the full story by @{author_x_handle} 👇' and the link.",
-    template: `{Post 1: the BAS post format, no link}
-
----
-
-{Post 2: one line on what readers will find}
-Read the full story by @{author_x_handle} 👇
-{url}`,
-  },
   x_archive: {
     id: "x_archive",
     label: "Archive post",
-    account: "BAS on X",
+    account: "@btcafricastory",
     platform: "x",
     optional: true,
     note:
-      "An evergreen post built from an older article, aimed at reach rather than news. Open on a person and a turning point. Short declarative sentences; fragments are fine for lists. Show growth with real numbers. Self-contained: the post tells the story and the link sits in the first comment. Close on a plain, motivating line, never a comparison. Do not include the link.",
-    template: `{Person and turning point}
+      "A main post that brings back an older article, aimed at reach rather than news. Open on a person and a turning point, with one real number. At most 280 characters unless the account has Premium. No link: Reply 1 carries it, using the older-piece wording. Close on a plain line, never a comparison.",
+    template: `{Person and turning point, with one real number}
 
-{Short declarative sentences with real numbers}
-
-{Plain, motivating closing line}`,
+${THREAD_LINES.mainPostEnd}`,
+    howToPost: "Post from @btcafricastory, then add Reply 1 with “Older piece” ticked.",
   },
   alt_text: {
     id: "alt_text",
@@ -133,11 +135,12 @@ Read the full story by @{author_x_handle} 👇
   },
 };
 
-export const CORE_OUTPUTS: OutputId[] = [
-  "x_bas_post",
-  "x_bas_comment",
-  "x_author_post",
-  "li_bas_post",
-  "li_author_post",
-];
-export const OPTIONAL_OUTPUTS: OutputId[] = ["x_thread", "x_archive", "alt_text"];
+// The BAS thread and the requote are on by default; everything else is optional.
+export const CORE_OUTPUTS: OutputId[] = ["x_bas_post", "x_bas_comment", "x_bas_action", "x_author_post"];
+export const OPTIONAL_OUTPUTS: OutputId[] = ["x_bas_extra", "x_archive", "alt_text", "li_bas_post", "li_author_post"];
+
+/** Outputs Studio writes itself from fixed wording, with no model call. */
+export const FIXED_OUTPUTS: OutputId[] = ["x_bas_comment"];
+
+/** X outputs posted from @btcafricastory, held to the BAS account's limit. */
+export const BAS_X_OUTPUTS: OutputId[] = ["x_bas_post", "x_bas_comment", "x_bas_action", "x_bas_extra", "x_archive"];

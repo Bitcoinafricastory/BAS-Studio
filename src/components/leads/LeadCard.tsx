@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ExternalLink, Radar, Rss, Sparkles, PenSquare } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import type { Lead } from "@/types";
+import { unverifiedLeadNotes } from "@/lib/unverified-lead";
 
 export default function LeadCard({ lead }: { lead: Lead }) {
   const when = (() => {
@@ -14,7 +15,12 @@ export default function LeadCard({ lead }: { lead: Lead }) {
 
   // Both actions hand the lead to another screen, so a lead is one click from research or a draft.
   const researchHref = `/?q=${encodeURIComponent(`Research this story and tell me if BAS should cover it: ${lead.title}`)}`;
-  const draftHref = `/draft?notes=${encodeURIComponent(`${lead.title}\n\n${lead.summary || ""}\n\nSource: ${lead.url}`.trim())}`;
+  // An AI radar lead goes over as a marked pointer, without its AI-written summary, so it can't be
+  // drafted as if the editor had supplied it. Feed items are real outlet posts and go over as before.
+  const draftNotes = lead.unverified
+    ? unverifiedLeadNotes(lead.title, lead.url)
+    : `${lead.title}\n\n${lead.summary || ""}\n\nSource: ${lead.url}`.trim();
+  const draftHref = `/draft?notes=${encodeURIComponent(draftNotes)}`;
 
   return (
     <article className="card group p-4 transition-colors hover:border-gray-700">

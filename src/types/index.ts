@@ -52,7 +52,12 @@ export interface Draft {
   seoTitle: string;
   metaDescription: string;
   focusKeywords: string;
-  suggestedEntities: string[];
+  authorId?: string; // an `authors` doc id; the server fills the byline fields from it
+  tags?: string[];
+  keyTakeaways?: string[];
+  faqs?: { question: string; answer: string }[];
+  linkedEntities?: { slug: string; name: string }[]; // directory profiles; sent as linkedEntityIds
+  suggestedEntities: string[]; // names with no directory profile, shown to the editor only
   suggestedInternalLinks: { title: string; url: string }[];
   claimsToVerify: string[];
   styleNotes?: string[]; // BAS style check results at generation time; BAS Studio only, never sent to the site

@@ -13,6 +13,9 @@ import {
   type StyleIssue,
 } from "./voice";
 import { getBasArchive, archiveBlock } from "./voice/archive";
+import { stripUnverifiedLeads } from "./unverified-lead";
+import { readTimeFor } from "./read-time";
+import { matchDirectoryEntities } from "./entities";
 import type { Draft } from "@/types";
 
 interface ParsedDraft {
@@ -23,7 +26,9 @@ interface ParsedDraft {
   metaDescription?: string;
   focusKeywords?: string;
   category?: string;
-  readTime?: string;
+  tags?: string[];
+  keyTakeaways?: string[];
+  faqs?: { question: string; answer: string }[];
   suggestedEntities?: string[];
   suggestedInternalLinks?: { title: string; url: string }[];
   claimsToVerify?: string[];
@@ -50,10 +55,18 @@ function parseResult(text: string): ParsedDraft {
  * or contrast framing, the model gets one pass to fix those sentences.
  */
 export async function generateDraft(
-  sourceMaterial: string,
+  rawMaterial: string,
   kind: "notes" | "youtube" | "audio" | "xspace",
   sourceUrl?: string
 ): Promise<Draft> {
+  // Unverified AI leads are pointers for the editor, never material. Neither their wording nor
+  // their link reaches the model or the list of links a draft may use.
+  const sourceMaterial = stripUnverifiedLeads(rawMaterial);
+  if (!sourceMaterial) {
+    throw new Error(
+      "These notes only hold an unverified AI lead. Open its link, paste the original post, page or email into the notes, then generate."
+    );
+  }
   const client = await getAnthropic();
   const [samples, archive] = await Promise.all([getStyleSamples(), getBasArchive()]);
 
@@ -117,6 +130,15 @@ export async function generateDraft(
 
   const now = new Date().toISOString();
   const category = parsed.category && CATEGORIES.includes(parsed.category) ? parsed.category : CATEGORIES[0];
+  const strings = (v: unknown) =>
+    Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && !!x.trim()).map((x) => x.trim()) : [];
+  const faqs = Array.isArray(parsed.faqs)
+    ? parsed.faqs
+        .filter((f) => f && typeof f.question === "string" && typeof f.answer === "string" && f.question.trim() && f.answer.trim())
+        .map((f) => ({ question: f.question.trim(), answer: f.answer.trim() }))
+    : [];
+  // Names with a directory profile are linked by slug; the rest stay as suggestions for the editor.
+  const { linked, unmatched } = await matchDirectoryEntities(strings(parsed.suggestedEntities));
 
   return {
     title: parsed.title,
@@ -128,13 +150,17 @@ export async function generateDraft(
     imageAlt: "",
     author: "",
     date: new Date().toISOString().split("T")[0],
-    readTime: parsed.readTime || "3 min read",
+    readTime: readTimeFor(html),
     youtubeUrl: kind === "youtube" ? sourceUrl || "" : "",
     status: "draft",
     seoTitle: parsed.seoTitle || parsed.title,
     metaDescription: parsed.metaDescription || parsed.excerpt,
     focusKeywords: parsed.focusKeywords || "",
-    suggestedEntities: parsed.suggestedEntities || [],
+    tags: strings(parsed.tags).slice(0, 8),
+    keyTakeaways: strings(parsed.keyTakeaways).slice(0, 5),
+    faqs: faqs.slice(0, 5),
+    linkedEntities: linked,
+    suggestedEntities: unmatched,
     suggestedInternalLinks: internalLinks,
     claimsToVerify: claims,
     styleNotes: issues.map((i) => i.message),

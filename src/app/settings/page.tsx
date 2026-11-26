@@ -43,7 +43,8 @@ const FIELDS: FieldConfig[] = [
     envVarName: "BAS_STUDIO_PASSCODE",
     placeholder: "Choose a passcode…",
     inputType: "password",
-    description: "Gates the whole app. Changing this only affects new logins — you'll stay signed in on this device.",
+    description:
+      "Gates the whole app. Use at least 10 characters. It can be changed but not removed. Changing it only affects new logins, so you stay signed in on this device.",
   },
 ];
 
@@ -165,13 +166,15 @@ export default function SettingsPage() {
                         <CheckCircle2 size={16} className="shrink-0" />
                         <p>Set and working.</p>
                       </div>
-                      <button
-                        onClick={() => removeField(field.key)}
-                        disabled={saving === field.key}
-                        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-400 disabled:opacity-50 transition-colors shrink-0"
-                      >
-                        <Trash2 size={13} /> Remove
-                      </button>
+                      {field.key !== "passcode" && (
+                        <button
+                          onClick={() => removeField(field.key)}
+                          disabled={saving === field.key}
+                          className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-400 disabled:opacity-50 transition-colors shrink-0"
+                        >
+                          <Trash2 size={13} /> Remove
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <p className="text-xs text-gray-600">Not set.</p>
@@ -220,10 +223,11 @@ export default function SettingsPage() {
       )}
 
       <p className="text-xs text-gray-600 mt-4">
-        Values entered here are stored in your Firestore <code className="bg-black/50 px-1 py-0.5 rounded">settings</code> collection
-        (server-only reads — never sent to the browser), not in a file on your machine. Firebase's own
-        credentials can't be managed from here — they're what this storage itself depends on, so they
-        have to stay in <code className="bg-black/50 px-1 py-0.5 rounded">.env.local</code> / Vercel.
+        Values entered here are stored in your Firestore <code className="bg-black/50 px-1 py-0.5 rounded">settings</code> collection,
+        not in a file on your machine. Studio never sends them to the browser, but your site&apos;s Firestore
+        rules must also keep that collection private, or anyone could read it. Keys in{" "}
+        <code className="bg-black/50 px-1 py-0.5 rounded">.env.local</code> or Vercel never touch the database.
+        Firebase&apos;s own credentials can&apos;t be managed from here, because this storage depends on them.
       </p>
     </Page>
   );

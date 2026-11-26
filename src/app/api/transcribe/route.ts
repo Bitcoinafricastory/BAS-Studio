@@ -6,6 +6,7 @@ import { transcribeFile } from "@/lib/transcribe";
 import { getYoutubeTranscript } from "@/lib/youtube";
 import { getSpaceTranscript } from "@/lib/xspace";
 import { requireAuth } from "@/lib/auth";
+import { assertLocalTools, LocalOnlyError } from "@/lib/local-only";
 
 // Every route here reads request-time secrets (Firebase, Anthropic, xAI) or
 // request data — never build-time static content. Without this, Next.js
@@ -27,6 +28,7 @@ export async function POST(req: NextRequest) {
     if (contentType.includes("application/json")) {
       const { youtubeUrl, xSpaceUrl } = await req.json();
       if (xSpaceUrl) {
+        assertLocalTools("Transcribing an X Space");
         return NextResponse.json(await getSpaceTranscript(String(xSpaceUrl)));
       }
       if (!youtubeUrl) {
@@ -37,6 +39,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (contentType.includes("multipart/form-data")) {
+      assertLocalTools("Transcribing an audio or video file");
       const formData = await req.formData();
       const file = formData.get("file") as File | null;
       if (!file) {
@@ -60,6 +63,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: "Unsupported content type" }, { status: 400 });
   } catch (err: any) {
+    if (err instanceof LocalOnlyError) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
     console.error("Transcribe error:", err);
     return NextResponse.json({ error: err.message || "Transcription failed" }, { status: 500 });
   }

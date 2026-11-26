@@ -5,6 +5,7 @@ import { mkdtemp, rm } from "fs/promises";
 import { tmpdir } from "os";
 import path from "path";
 import { transcribeFile } from "./transcribe";
+import { assertLocalTools } from "./local-only";
 
 const execFile = promisify(execFileCb);
 
@@ -35,6 +36,7 @@ export async function getYoutubeTranscript(url: string): Promise<YoutubeTranscri
   }
 
   // Fallback: download audio with yt-dlp, transcribe locally with Whisper.
+  assertLocalTools("This video has no captions, and transcribing its audio");
   const dir = await mkdtemp(path.join(tmpdir(), "bas-yt-"));
   const audioPath = path.join(dir, "audio.mp3");
   try {

@@ -1,4 +1,4 @@
-import { HANDLE_REGISTRY } from "./registry";
+import { HANDLE_REGISTRY, THREAD_LINES } from "./registry";
 import { BANNED_WORD_PATTERNS, BANNED_PHRASES as VOICE_BANNED_PHRASES } from "../voice/rules";
 
 // The banned lists live in the shared BAS voice (src/lib/voice/rules.ts), so articles and
@@ -27,14 +27,17 @@ ACCURACY (most important)
 - Never use private group content, DMs or internal notes.
 
 VOICE
-- BAS posts speak as BAS and credit the author: "Read the full story by @{author_x}".
-- Author posts start "In my latest for @btcafricastory, I covered" on X and "In my latest for Bitcoin Africa Story, I covered" on LinkedIn.
-- Order: hook, specifics, one sentence on why it matters, what's next, call to action.
-- Short, plain sentences with concrete names, places, dates and numbers. No hype.
+- Posts from @btcafricastory speak as BAS, in the third person ("@Destinysmart_ visited Cotonou").
+- The requote is the author's own voice, in the first person, with an angle the main post did not use.
+- The LinkedIn author post starts "In my latest for Bitcoin Africa Story, I covered".
+- Tell it as a story: connected sentences, each saying one thing. Avoid strings of short fragments, each ending in a full stop.
+- Lead with what the reader gets. Concrete names, places, dates and numbers. No hype.
 - Group long lists into types ("visa, travel and financial barriers").
 - A closing line may motivate, but never compares the reader to someone.
 
 NEVER USE
+- Prices, deadline pressure ("hurry", "last chance", "don't miss"), teaser headers or every point of the article in the main post.
+- Poverty framing ("one of the poorest countries"), and superlatives or "firsts" the fact sheet does not state.
 - Permission language, throat-clearing, flourishes or performed candor.
 - These words: ${BANNED_WORDS.join(", ")}.
 - "It's not X, it's Y" or "No one did X. One person did Y."
@@ -44,9 +47,10 @@ NEVER USE
 - The same fact twice.
 
 PLATFORM RULES
-- X, BAS post: long posts allowed (Premium). No link in the body. End with "Check the first comment to read the full story. 👇"
-- X, BAS first comment: "Read the full story by @{author_x} 👇" then the URL on its own line.
-- X, author post: at most 280 characters, with a link counting as 23. End with the URL.
+- X counts a link as 23 characters. Every X post is at most 280 characters unless you are told the account has Premium.
+- X, BAS main post: the story with every named account tagged, no link, ending "${THREAD_LINES.mainPostEnd}"
+- X, Reply 2 and Reply 3: one link each, taken only from LINKS IN THE ARTICLE. Write only SKIP if there is nothing fitting.
+- X, requote from the author: first person, a different angle from the MAIN POST, no link, ending "${THREAD_LINES.requoteEnd}"
 - LinkedIn: full names, no @handles. The link goes inside the post: "Read the full story by {author_name}: {url}". Three or four hashtags at the end. At most 3,000 characters.
 
 If the fact sheet lacks something the template needs, leave that line out. Never fill a gap with a guess.`;

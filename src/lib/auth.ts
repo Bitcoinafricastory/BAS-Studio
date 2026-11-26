@@ -1,7 +1,7 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { getPasscode } from "./passcode";
+import { getPasscode, missingPasscodeMessage } from "./passcode";
 
 export const SESSION_COOKIE = "bas_studio_session";
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 days, in seconds
@@ -48,22 +48,37 @@ export function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(ha, hb);
 }
 
+/** Signs this browser in for SESSION_MAX_AGE. Used by login and by first-time setup. */
+export function setSessionCookie() {
+  cookies().set(SESSION_COOKIE, createSessionToken(), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: SESSION_MAX_AGE,
+  });
+}
+
 /**
  * Call at the top of every API handler. Returns a 401 response to send back, or null when the
  * request may continue. The passcode screen alone only hides the interface; without this check
  * anyone who knew a /api/ address could read or change data.
  *
- * Like the screen, it stays open while no passcode exists anywhere (a fresh install), so the
- * person can still reach Settings to create one. If the passcode can't be read because the
- * database errors, it refuses rather than guessing.
+ * There is no open state: with no passcode configured, every request is refused until one is
+ * created (from the lock screen on your own machine, or from Vercel's environment variables
+ * when hosted). If the passcode can't be read because the database errors, it refuses too.
  */
 export async function requireAuth(): Promise<NextResponse | null> {
   if (verifySessionToken(cookies().get(SESSION_COOKIE)?.value)) return null;
+  let passcode: string | null;
   try {
-    if (!(await getPasscode())) return null;
+    passcode = await getPasscode();
   } catch (err) {
     console.error("Could not verify access:", err);
     return NextResponse.json({ error: "Couldn’t verify access right now. Try again in a moment." }, { status: 503 });
+  }
+  if (!passcode) {
+    return NextResponse.json({ error: missingPasscodeMessage(), setup: true }, { status: 401 });
   }
   return NextResponse.json({ error: "Not signed in. Enter your passcode to continue." }, { status: 401 });
 }
