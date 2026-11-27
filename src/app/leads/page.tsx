@@ -29,6 +29,7 @@ export default function LeadsPage() {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || "The AI radar didn't respond.");
         setLeads((current) => mergeLeads(current, data.leads || []));
+        if (Array.isArray(data.notes) && data.notes.length) setRadarNote(data.notes.join(" "));
       })
       .catch((err: any) => setRadarNote(`AI radar skipped this time: ${err.message}`))
       .finally(() => setRadarLoading(false));

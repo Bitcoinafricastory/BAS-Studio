@@ -60,8 +60,9 @@ export async function fetchMarketRadar(): Promise<Lead[]> {
       })
     );
   } catch (err) {
-    // Market radar is a bonus signal, not critical path — never let it break Leads.
+    // A bonus signal, not the critical path: the Leads route catches this and shows a short note,
+    // so the reason reaches the editor instead of an empty list.
     console.error("Market radar failed:", err);
-    return [];
+    throw err;
   }
 }
