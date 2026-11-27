@@ -59,7 +59,7 @@ export const FACT_SHEET_PROMPT = `You extract a fact sheet from one published ne
 
 Rules:
 - Use only what the article text says. No outside knowledge, no guesses.
-- Every item in "facts" keeps the exact article sentence it came from in "sourceSentence".
+- Every item in "facts" keeps the exact article sentence it came from in "sourceSentence". List at most 15 facts, the ones a social post would use.
 - Put a claim in "hedged" when the article states it with uncertainty ("hinted", "reportedly", "according to", "plans to", "may"), with the hedge word. The copywriter must keep that certainty.
 - Numbers are copied exactly as written, with what they count.
 - Quotes are copied exactly, with the speaker.
@@ -67,7 +67,7 @@ Rules:
 - "whyItMatters" and "whatsNext" must come from the article. Use an empty string if the article does not say.
 - "followsEarlierCoverage" is true only if the article itself says it follows earlier BAS coverage of the same subject.
 
-Return ONLY valid JSON, no markdown, matching exactly:
+Record the fact sheet with the record tool, matching:
 {"subject":"","followsEarlierCoverage":false,"what":"","who":[{"name":"","role":"","handle":null}],"when":"","where":"","numbers":[{"value":"","context":""}],"quotes":[{"speaker":"","text":""}],"whyItMatters":"","whatsNext":"","hedged":[{"claim":"","hedge":""}],"facts":[{"text":"","sourceSentence":""}]}`;
 
 export const REVIEWER_PROMPT = `You are a fact-checking reviewer for a news outlet's social posts. You get a FACT SHEET and one DRAFT post. List every claim in the draft that the fact sheet does not support: added facts, upgraded certainty (e.g. "hinted" turned into "announced"), invented causes, generalizations past the story, or merged quotes. Ignore style.

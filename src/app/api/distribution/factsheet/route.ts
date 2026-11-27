@@ -5,7 +5,7 @@ import { findAuthor, AUTHORS } from "@/lib/distribution/registry";
 import { requireAuth } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
   const denied = await requireAuth();
