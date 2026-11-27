@@ -36,9 +36,18 @@ export function getAdminDb() {
 }
 
 export function getAdminBucket() {
-  const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+  // The bucket is named after the Firebase project ("<project>.firebasestorage.app"), so when the
+  // setting is missing or blank it is worked out from the service account key Studio already needs.
+  const app = getAdminApp();
+  let bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || process.env.FIREBASE_STORAGE_BUCKET || "";
   if (!bucketName) {
-    throw new Error("NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET is not set in .env.local");
+    try {
+      const projectId = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY || "{}").project_id;
+      if (projectId) bucketName = `${projectId}.firebasestorage.app`;
+    } catch {}
   }
-  return getStorage(getAdminApp()).bucket(bucketName);
+  if (!bucketName) {
+    throw new Error("Couldn’t work out the Firebase storage bucket. Set FIREBASE_STORAGE_BUCKET.");
+  }
+  return getStorage(app).bucket(bucketName);
 }
