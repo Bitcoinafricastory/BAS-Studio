@@ -1,9 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { fetchAllFeeds } from "@/lib/feeds";
 import { fetchMarketRadar } from "@/lib/market-radar";
 import { fetchXRadar } from "@/lib/x-radar";
-import type { Source } from "@/types";
+import { mergeLeads } from "@/lib/leads-merge";
+import type { Lead, Source } from "@/types";
 import { requireAuth } from "@/lib/auth";
 
 // Every route here reads request-time secrets (Firebase, Anthropic, xAI) or
@@ -11,45 +12,48 @@ import { requireAuth } from "@/lib/auth";
 // attempts to statically pre-render GET routes at build time and fails
 // noisily (harmlessly) since those secrets are not available then.
 export const dynamic = "force-dynamic";
-// Web-search research and the live radars take longer than the platform default allows.
 export const maxDuration = 60;
 
+// Each AI radar gets this long before it's dropped, so one slow search can't run the whole
+// request past the platform's time limit.
+const RADAR_LIMIT_MS = 45_000;
 
-export async function GET() {
+function withinLimit(task: Promise<Lead[]>, label: string): Promise<Lead[]> {
+  return Promise.race([
+    task,
+    new Promise<Lead[]>((resolve) =>
+      setTimeout(() => {
+        console.warn(`${label} took longer than ${RADAR_LIMIT_MS / 1000}s and was skipped.`);
+        resolve([]);
+      }, RADAR_LIMIT_MS)
+    ),
+  ]);
+}
+
+async function feedLeads(): Promise<Lead[]> {
+  const snap = await getAdminDb().collection("sources").get();
+  const sources = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Source, "id">) }));
+  return fetchAllFeeds(sources);
+}
+
+const radarLeads = () =>
+  Promise.all([withinLimit(fetchMarketRadar(), "Market radar"), withinLimit(fetchXRadar(), "X radar")]);
+
+/**
+ * ?part=feeds returns the RSS and news feeds, which take seconds. ?part=radar returns the two AI
+ * radars, which can take most of a minute. The Leads screen asks for both at once and shows the
+ * feeds as soon as they arrive. With no part, both come back together, as before.
+ */
+export async function GET(req: NextRequest) {
   const denied = await requireAuth();
   if (denied) return denied;
 
+  const part = new URL(req.url).searchParams.get("part");
   try {
-    const db = getAdminDb();
-    const snap = await db.collection("sources").get();
-    const sources = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<Source, "id">) }));
-
-    // Feeds, Claude's web-search radar, and Grok's X radar all run in parallel. Each fails
-    // closed on its own (dead feed, missing API key, etc.) — one source failing never takes
-    // down the others.
-    const [feedLeads, radarLeads, xRadarLeads] = await Promise.all([
-      fetchAllFeeds(sources),
-      fetchMarketRadar(),
-      fetchXRadar(),
-    ]);
-
-    // The same story often arrives from several feeds. Keep the first copy of each link, and treat
-    // an unreadable date as "now" so it can't break the sort.
-    const seen = new Set<string>();
-    const stamp = (d: string) => {
-      const t = new Date(d).getTime();
-      return Number.isFinite(t) ? t : Date.now();
-    };
-    const leads = [...feedLeads, ...radarLeads, ...xRadarLeads]
-      .filter((l) => {
-        const key = (l.url || l.id).replace(/[?#].*$/, "").replace(/\/$/, "").toLowerCase();
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      })
-      .sort((a, b) => stamp(b.publishedAt) - stamp(a.publishedAt));
-
-    return NextResponse.json({ leads });
+    if (part === "feeds") return NextResponse.json({ leads: mergeLeads(await feedLeads()) });
+    if (part === "radar") return NextResponse.json({ leads: mergeLeads(...(await radarLeads())) });
+    const [feeds, [market, x]] = await Promise.all([feedLeads(), radarLeads()]);
+    return NextResponse.json({ leads: mergeLeads(feeds, market, x) });
   } catch (err: any) {
     console.error("Leads GET error:", err);
     return NextResponse.json({ error: err.message || "Failed to load leads" }, { status: 500 });

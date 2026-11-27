@@ -31,7 +31,8 @@ export async function fetchMarketRadar(): Promise<Lead[]> {
       messages: [
         { role: "user", content: "What's happening in African Bitcoin news in the last 48 hours?" },
       ],
-      tools: [{ type: "web_search_20250305", name: "web_search" } as any],
+      // A few searches are enough for a 48-hour sweep, and each extra one adds several seconds.
+      tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 3 } as any],
     });
 
     const text = response.content
