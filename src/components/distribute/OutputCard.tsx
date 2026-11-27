@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Copy, Check, RefreshCw, ExternalLink, Loader2, AlertTriangle, CircleAlert, CheckCircle2 } from "lucide-react";
 import { xLength, plainLength } from "@/lib/distribution/count";
+import { xLimitFor } from "@/lib/distribution/checks";
 import type { OutputSpec } from "@/lib/distribution/outputs";
 import type { AuthorRecord, Variant } from "@/lib/distribution/types";
 
@@ -21,11 +22,13 @@ interface Props {
   onMarkPosted: (draftText: string, postedText: string, postUrl: string) => Promise<void>;
 }
 
-function limitFor(id: string, author: AuthorRecord): number | null {
-  if (id === "x_author_post") return author.premium ? 4000 : 280;
-  if (id === "li_bas_post" || id === "li_author_post") return 3000;
-  return null;
+function limitFor(spec: OutputSpec, author: AuthorRecord): number | null {
+  if (spec.platform === "linkedin") return 3000;
+  return xLimitFor(spec.id, author);
 }
+
+// "Open in X" starts a new standalone post, so it only makes sense for posts that start a thread.
+const OPENS_A_POST = new Set(["x_bas_post", "x_archive"]);
 
 export default function OutputCard({ spec, state, author, posted, onRegenerate, onMarkPosted }: Props) {
   const [active, setActive] = useState(0);
@@ -48,7 +51,7 @@ export default function OutputCard({ spec, state, author, posted, onRegenerate, 
   const edited = text !== original;
 
   const isX = spec.platform === "x";
-  const cap = limitFor(spec.id, author);
+  const cap = limitFor(spec, author);
   const count = isX ? xLength(text) : plainLength(text);
   const over = cap !== null && count > cap;
 
@@ -61,8 +64,7 @@ export default function OutputCard({ spec, state, author, posted, onRegenerate, 
   }
 
   function openInX() {
-    const first = spec.id === "x_thread" ? text.split(/^\s*---\s*$/m)[0].trim() : text;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(first)}`, "_blank", "noopener");
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank", "noopener");
   }
 
   async function save() {
@@ -90,7 +92,10 @@ export default function OutputCard({ spec, state, author, posted, onRegenerate, 
               </span>
             )}
           </h3>
-          <p className="text-xs text-gray-500">{spec.account}</p>
+          <p className="text-xs text-gray-500">
+            {spec.account}
+            {spec.howToPost ? ` · ${spec.howToPost}` : ""}
+          </p>
         </div>
         {state.variants.length > 1 && (
           <div className="flex rounded-full bg-gray-900 border border-gray-800 p-0.5 text-xs">
@@ -140,7 +145,7 @@ export default function OutputCard({ spec, state, author, posted, onRegenerate, 
               <button onClick={copy} className="btn-ghost focus-ring">
                 {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? "Copied" : "Copy"}
               </button>
-              {isX && (
+              {isX && OPENS_A_POST.has(spec.id) && (
                 <button onClick={openInX} className="btn-ghost focus-ring">
                   <ExternalLink size={13} /> Open in X
                 </button>
@@ -160,7 +165,7 @@ export default function OutputCard({ spec, state, author, posted, onRegenerate, 
           {markOpen && (
             <div className="flex flex-col gap-2 rounded-xl border border-gray-800 bg-black/40 p-3">
               <label className="text-xs text-gray-400">
-                Link to the live post (optional). The text above, with your edits, is saved so the generator can learn from it.
+                Link to the live post (optional). The text above, with your edits, is saved with this article as a record of what went out.
               </label>
               <div className="flex gap-2">
                 <input

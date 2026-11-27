@@ -39,6 +39,22 @@ export const HANDLE_REGISTRY: RegistryEntry[] = [
 
 export const BAS_X_HANDLE = "btcafricastory";
 
+// Whether @btcafricastory has X Premium. Without it every BAS post must fit 280 characters.
+// Turn this on only while the account is paying for Premium.
+export const BAS_X_PREMIUM = false;
+
+export const X_LIMIT = 280;
+export const X_PREMIUM_LIMIT = 4000;
+
+// The fixed lines of the BAS thread, in Destiny's own wording. Change them here and the
+// generator, the checks and Reply 1 all follow.
+export const THREAD_LINES = {
+  mainPostEnd: "Full story in the comments 👇",
+  replyLatest: (authorHandle: string) => `Read more about it in our latest article, by @${authorHandle.replace(/^@/, "")} 👇`,
+  replyOlder: (authorHandle: string) => `Read more about it on Bitcoin Africa Story, by @${authorHandle.replace(/^@/, "")} 👇`,
+  requoteEnd: `Full story on @btcafricastory 👇`,
+};
+
 // Author records. The CMS stores only an author name on each article, so the X handle,
 // LinkedIn name and Premium flag live here. Add each author as they join.
 export const AUTHORS: AuthorRecord[] = [

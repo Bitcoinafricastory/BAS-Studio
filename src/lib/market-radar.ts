@@ -31,7 +31,8 @@ export async function fetchMarketRadar(): Promise<Lead[]> {
       messages: [
         { role: "user", content: "What's happening in African Bitcoin news in the last 48 hours?" },
       ],
-      tools: [{ type: "web_search_20250305", name: "web_search" } as any],
+      // A few searches are enough for a 48-hour sweep, and each extra one adds several seconds.
+      tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 3 } as any],
     });
 
     const text = response.content
@@ -59,8 +60,9 @@ export async function fetchMarketRadar(): Promise<Lead[]> {
       })
     );
   } catch (err) {
-    // Market radar is a bonus signal, not critical path — never let it break Leads.
+    // A bonus signal, not the critical path: the Leads route catches this and shows a short note,
+    // so the reason reaches the editor instead of an empty list.
     console.error("Market radar failed:", err);
-    return [];
+    throw err;
   }
 }

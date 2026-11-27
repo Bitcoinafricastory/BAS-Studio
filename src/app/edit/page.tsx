@@ -5,7 +5,8 @@ import dynamic from "next/dynamic";
 import { CATEGORIES } from "@/lib/constants";
 import { slugify } from "@/lib/slugify";
 import type { Draft } from "@/types";
-import { Loader2, Send, Sparkles, CheckCircle2, ExternalLink, Users, Link2, AlertTriangle, FileEdit, ShieldCheck } from "lucide-react";
+import { Loader2, Send, Sparkles, CheckCircle2, ExternalLink, Users, Link2, AlertTriangle, FileEdit, ShieldCheck, X, Plus } from "lucide-react";
+import { readTimeFor } from "@/lib/read-time";
 import { lintDraft } from "@/lib/voice";
 import Link from "next/link";
 import { Page, EmptyState, ErrorBanner } from "@/components/ui/Page";
@@ -28,13 +29,25 @@ const ImageUploader = dynamic(() => import("@/components/editor/ImageUploader"),
 
 const PENDING_KEY = "bas-studio-pending-draft";
 
+interface AuthorOption {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+// The house byline. Used as the default when the draft has no author yet.
+const DEFAULT_AUTHOR_SLUG = "destiny-smart";
+
 export default function EditSendPage() {
   const [form, setForm] = useState<Draft | null>(null);
   const [imagePreview, setImagePreview] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [sending, setSending] = useState(false);
   const [sentId, setSentId] = useState<string | null>(null);
+  const [sentSlug, setSentSlug] = useState("");
   const [error, setError] = useState("");
+  const [authors, setAuthors] = useState<AuthorOption[]>([]);
+  const [claimsChecked, setClaimsChecked] = useState(false);
 
   const [selection, setSelection] = useState<{ index: number; length: number } | null>(null);
   const [bubblePos, setBubblePos] = useState<{ top: number; left: number } | null>(null);
@@ -73,9 +86,26 @@ export default function EditSendPage() {
     }
   }, []);
 
+  // Byline picker: the site's authors list. A draft with no author gets the house byline.
+  useEffect(() => {
+    fetch("/api/authors")
+      .then((r) => r.json())
+      .then((d) => {
+        const list: AuthorOption[] = Array.isArray(d.authors) ? d.authors : [];
+        setAuthors(list);
+        const house = list.find((a) => a.slug === DEFAULT_AUTHOR_SLUG);
+        if (house) setForm((f) => (f && !f.authorId ? { ...f, authorId: house.id } : f));
+      })
+      .catch(() => setAuthors([]));
+  }, []);
+
   function update(patch: Partial<Draft>) {
     setForm((f) => (f ? { ...f, ...patch } : f));
   }
+
+  const faqs = form?.faqs || [];
+  const setFaq = (i: number, patch: Partial<{ question: string; answer: string }>) =>
+    update({ faqs: faqs.map((f, idx) => (idx === i ? { ...f, ...patch } : f)) });
 
   function handleTitleChange(title: string) {
     update({ title, slug: slugify(title) });
@@ -157,17 +187,43 @@ export default function EditSendPage() {
       setError("Title, excerpt, category, and body are all required before sending.");
       return;
     }
+    if (form.claimsToVerify?.length && !claimsChecked) {
+      setError("Check the claims listed on the right, or cut them, then tick the box before sending.");
+      return;
+    }
     setSending(true);
     setError("");
     try {
+      // Only the article itself goes to the site. Studio's notes (claims, style notes, source
+      // material) stay here: the site's articles can be read by anyone.
+      const payload = {
+        title: form.title,
+        slug: form.slug,
+        excerpt: form.excerpt,
+        content: form.content,
+        category: form.category,
+        image: form.image,
+        imageAlt: form.imageAlt,
+        authorId: form.authorId || "",
+        date: form.date,
+        youtubeUrl: form.youtubeUrl,
+        seoTitle: form.seoTitle,
+        metaDescription: form.metaDescription,
+        focusKeywords: form.focusKeywords,
+        tags: form.tags || [],
+        keyTakeaways: form.keyTakeaways || [],
+        faqs,
+        linkedEntityIds: (form.linkedEntities || []).map((e) => e.slug),
+      };
       const res = await fetch("/api/draft/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to save draft");
       setSentId(data.id);
+      setSentSlug(data.slug && data.slug !== form.slug ? data.slug : "");
       localStorage.removeItem(PENDING_KEY);
     } catch (err: any) {
       setError(err.message);
@@ -204,6 +260,11 @@ export default function EditSendPage() {
           <p className="text-sm leading-relaxed text-gray-500">
             Saved as a draft. Publish it from your BAS dashboard when you're ready.
           </p>
+          {sentSlug && (
+            <p className="text-xs text-gray-500">
+              Another article already used that URL, so this one was saved as <code>{sentSlug}</code>.
+            </p>
+          )}
           <div className="mt-3 flex gap-2">
             <Link href="/draft" className="btn-primary">
               Start another draft
@@ -272,7 +333,7 @@ export default function EditSendPage() {
 
         <button
           onClick={sendToFirebase}
-          disabled={sending}
+          disabled={sending || (!!form.claimsToVerify?.length && !claimsChecked)}
           className="btn-primary py-3"
         >
           {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
@@ -297,7 +358,7 @@ export default function EditSendPage() {
           <input
             value={form.imageAlt}
             onChange={(e) => update({ imageAlt: e.target.value })}
-            placeholder="Image alt text"
+            placeholder="Alt text: name the project and say what the image shows"
             className="input"
           />
         </div>
@@ -318,6 +379,17 @@ export default function EditSendPage() {
               ))}
             </select>
           </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Author</label>
+            <select value={form.authorId || ""} onChange={(e) => update({ authorId: e.target.value })} className="input">
+              <option value="">No byline yet</option>
+              {authors.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="block text-xs text-gray-500 mb-1">Date</label>
@@ -330,13 +402,18 @@ export default function EditSendPage() {
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Read time</label>
-              <input
-                value={form.readTime}
-                onChange={(e) => update({ readTime: e.target.value })}
-                placeholder="4 min read"
-                className="input"
-              />
+              <p className="input text-gray-400">{readTimeFor(form.content)}</p>
             </div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Tags, comma separated</label>
+            <input
+              value={(form.tags || []).join(", ")}
+              onChange={(e) => update({ tags: e.target.value.split(",").map((t) => t.trimStart()) })}
+              onBlur={() => update({ tags: (form.tags || []).map((t) => t.trim()).filter(Boolean) })}
+              placeholder="Names, places, topics"
+              className="input"
+            />
           </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1">YouTube URL (optional)</label>
@@ -372,6 +449,55 @@ export default function EditSendPage() {
           />
         </div>
 
+        <div className="card p-4 flex flex-col gap-3">
+          <h3 className="text-sm font-semibold text-gray-200">Key Takeaways and FAQ</h3>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Key Takeaways, one per line</label>
+            <textarea
+              value={(form.keyTakeaways || []).join("\n")}
+              onChange={(e) => update({ keyTakeaways: e.target.value.split("\n") })}
+              onBlur={() => update({ keyTakeaways: (form.keyTakeaways || []).map((t) => t.trim()).filter(Boolean) })}
+              rows={4}
+              className="input resize-y"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <p className="text-xs text-gray-500">FAQ (shown on the article when it has at least one entry)</p>
+            {faqs.map((f, i) => (
+              <div key={i} className="flex flex-col gap-1.5 rounded-lg border border-gray-800 p-2">
+                <div className="flex items-start gap-1.5">
+                  <input
+                    value={f.question}
+                    onChange={(e) => setFaq(i, { question: e.target.value })}
+                    placeholder="Question"
+                    className="input flex-1"
+                  />
+                  <button
+                    onClick={() => update({ faqs: faqs.filter((_, idx) => idx !== i) })}
+                    aria-label="Remove this question"
+                    className="mt-2 text-gray-500 hover:text-red-400"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+                <textarea
+                  value={f.answer}
+                  onChange={(e) => setFaq(i, { answer: e.target.value })}
+                  placeholder="Answer, using only facts in the article"
+                  rows={2}
+                  className="input resize-y"
+                />
+              </div>
+            ))}
+            <button
+              onClick={() => update({ faqs: [...faqs, { question: "", answer: "" }] })}
+              className="flex items-center gap-1 self-start text-xs text-gray-400 hover:text-gold-fg"
+            >
+              <Plus size={12} /> Add a question
+            </button>
+          </div>
+        </div>
+
         <div className="card p-4 flex flex-col gap-2">
           <h3 className="text-sm font-semibold text-gray-200 flex items-center gap-1.5">
             <ShieldCheck size={14} /> BAS style check
@@ -389,10 +515,36 @@ export default function EditSendPage() {
           )}
         </div>
 
+        {(form.linkedEntities?.length ?? 0) > 0 && (
+          <div className="card p-4 flex flex-col gap-2">
+            <h3 className="text-sm font-semibold text-gray-200 flex items-center gap-1.5">
+              <Users size={14} /> Linked directory profiles
+            </h3>
+            <div className="flex flex-wrap gap-1.5">
+              {(form.linkedEntities || []).map((e) => (
+                <span
+                  key={e.slug}
+                  className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-gray-800 border border-gray-700 text-gray-300"
+                >
+                  {e.name}
+                  <button
+                    onClick={() => update({ linkedEntities: (form.linkedEntities || []).filter((x) => x.slug !== e.slug) })}
+                    aria-label={`Unlink ${e.name}`}
+                    className="text-gray-500 hover:text-red-400"
+                  >
+                    <X size={11} />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <p className="text-xs text-gray-600">These fill Related Coverage on each profile. Remove any that don’t belong.</p>
+          </div>
+        )}
+
         {form.suggestedEntities?.length > 0 && (
           <div className="card p-4 flex flex-col gap-2">
             <h3 className="text-sm font-semibold text-gray-200 flex items-center gap-1.5">
-              <Users size={14} /> Suggested directory links
+              <Users size={14} /> Named, but not in the directory
             </h3>
             <div className="flex flex-wrap gap-1.5">
               {form.suggestedEntities.map((e, i) => (
@@ -405,7 +557,7 @@ export default function EditSendPage() {
               ))}
             </div>
             <p className="text-xs text-gray-600">
-              Link these from your dashboard's directory-linking step after sending.
+              No directory profile matched these names. Link or add them from the dashboard after sending.
             </p>
           </div>
         )}
@@ -442,6 +594,16 @@ export default function EditSendPage() {
                 <li key={i}>{c}</li>
               ))}
             </ul>
+            <label className="mt-1 flex items-start gap-2 text-xs text-gray-300">
+              <input
+                type="checkbox"
+                checked={claimsChecked}
+                onChange={(e) => setClaimsChecked(e.target.checked)}
+                className="mt-0.5 accent-yellow-500"
+              />
+              I checked each of these against a source I opened, or cut it from the draft. These notes stay in Studio and
+              are not sent to the site.
+            </label>
           </div>
         )}
       </div>

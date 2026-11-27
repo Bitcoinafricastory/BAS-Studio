@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { Loader2, Search, ArrowLeft, Sparkles, ImageIcon, ChevronDown } from "lucide-react";
 import OutputCard, { CardState } from "@/components/distribute/OutputCard";
@@ -11,6 +11,13 @@ import type { ArticleListItem, ArticleRecord, AuthorRecord, FactSheet, OutputId 
 type Meta = Omit<ArticleRecord, "bodyText">;
 
 const EMPTY_AUTHOR: AuthorRecord = { name: "", xHandle: "", linkedinName: "", premium: false };
+
+// Reply 1 says "our latest article" for new pieces and "on Bitcoin Africa Story" for older ones.
+const OLDER_AFTER_DAYS = 7;
+const isOlder = (date: string) => {
+  const t = Date.parse(date);
+  return Number.isFinite(t) && Date.now() - t > OLDER_AFTER_DAYS * 24 * 60 * 60 * 1000;
+};
 
 export default function DistributePage() {
   const [articles, setArticles] = useState<ArticleListItem[]>([]);
@@ -28,6 +35,10 @@ export default function DistributePage() {
   const [angle, setAngle] = useState("");
   const [selected, setSelected] = useState<OutputId[]>(CORE_OUTPUTS);
   const [cards, setCards] = useState<Partial<Record<OutputId, CardState>>>({});
+  const [olderPiece, setOlderPiece] = useState(false);
+  // The requote is written against the current main post, so keep the latest cards at hand.
+  const cardsRef = useRef(cards);
+  cardsRef.current = cards;
   const [posted, setPosted] = useState<Record<string, { postedText: string; postUrl: string }>>({});
 
   useEffect(() => {
@@ -68,6 +79,7 @@ export default function DistributePage() {
       setCards({});
       setAngle("");
       setSelected(CORE_OUTPUTS);
+      setOlderPiece(isOlder(data.article.date));
       fetch(`/api/distribution/posted?articleId=${id}`)
         .then((r) => r.json())
         .then((d) => setPosted(d.posted || {}))
@@ -80,27 +92,39 @@ export default function DistributePage() {
   }
 
   const runOne = useCallback(
-    async (output: OutputId) => {
-      if (!article || !factSheet) return;
+    async (output: OutputId, mainPostOverride?: string) => {
+      if (!article || !factSheet) return null;
+      const mainPost =
+        output === "x_author_post" ? mainPostOverride ?? cardsRef.current.x_bas_post?.variants[0]?.text ?? "" : undefined;
       setCards((c) => ({ ...c, [output]: { status: "loading", variants: c[output]?.variants ?? [] } }));
       try {
         const res = await fetch("/api/distribution/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ articleId: article.id, output, factSheet, author, angle }),
+          body: JSON.stringify({ articleId: article.id, output, factSheet, author, angle, mainPost, olderPiece }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Generation failed");
         setCards((c) => ({ ...c, [output]: { status: "done", variants: data.variants } }));
+        return data.variants as CardState["variants"];
       } catch (e: any) {
         setCards((c) => ({ ...c, [output]: { status: "error", variants: [], error: e.message } }));
+        return null;
       }
     },
-    [article, factSheet, author, angle]
+    [article, factSheet, author, angle, olderPiece]
   );
 
-  function generateAll() {
-    selected.forEach((o) => runOne(o));
+  // Everything runs at once, except the requote: it waits for the main post so it can take a
+  // different angle from it.
+  async function generateAll() {
+    const wantsRequote = selected.includes("x_author_post");
+    const others = selected.filter((o) => o !== "x_author_post");
+    const runs = others.map((o) => runOne(o));
+    if (!wantsRequote) return;
+    const mainIndex = others.indexOf("x_bas_post");
+    const main = mainIndex >= 0 ? await runs[mainIndex] : null;
+    runOne("x_author_post", main?.[0]?.text);
   }
 
   async function markPosted(outputId: OutputId, draftText: string, postedText: string, postUrl: string) {
@@ -129,7 +153,7 @@ export default function DistributePage() {
       <Page>
         <PageHeader
           title="Distribute"
-          description="Pick a published article. Studio drafts the X and LinkedIn posts, checks them against the article, and you review. Nothing posts automatically."
+          description="Pick a published article. Studio drafts the BAS thread on X and your requote, checks them against the article, and you review. Nothing posts automatically."
         />
 
         <div className="relative mb-4">
@@ -243,7 +267,7 @@ export default function DistributePage() {
                   onChange={(e) => setAuthor({ ...author, premium: e.target.checked })}
                   className="accent-yellow-500"
                 />
-                Author has X Premium
+                Author has X Premium (longer requote)
               </label>
             </div>
             {!authorReady && <p className="text-xs text-amber-300 mt-2">Add the author's name and X handle to continue.</p>}
@@ -258,6 +282,19 @@ export default function DistributePage() {
               className="input mt-2"
             />
           </div>
+
+          <label className="flex items-start gap-2 text-xs text-gray-400">
+            <input
+              type="checkbox"
+              checked={olderPiece}
+              onChange={(e) => setOlderPiece(e.target.checked)}
+              className="mt-0.5 accent-yellow-500"
+            />
+            <span>
+              Older piece. Reply 1 says “on Bitcoin Africa Story” instead of “our latest article”. Ticked automatically for
+              articles more than {OLDER_AFTER_DAYS} days old.
+            </span>
+          </label>
 
           <div>
             <p className="text-xs font-semibold text-gray-400 mb-2">Posts to write</p>

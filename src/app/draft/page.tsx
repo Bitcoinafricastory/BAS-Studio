@@ -6,6 +6,7 @@ import { Page, PageHeader, ErrorBanner } from "@/components/ui/Page";
 import { FileText, Youtube, Mic, Radio, CircleDot, Loader2, Sparkles, Upload, Copy, Check, X } from "lucide-react";
 import Recorder from "@/components/draft/Recorder";
 import type { Draft } from "@/types";
+import { hasUnverifiedLead, stripUnverifiedLeads } from "@/lib/unverified-lead";
 
 type Mode = "notes" | "youtube" | "xspace" | "record" | "audio";
 
@@ -56,6 +57,8 @@ export default function NewDraftPage() {
 
   const text = texts[mode];
   const error = errors[mode] || "";
+  // A lead from the AI radar is a pointer only. Until the editor adds real material, there is nothing to draft from.
+  const onlyLead = mode === "notes" && hasUnverifiedLead(text) && !stripUnverifiedLeads(text);
   const sourceUrl = mode === "youtube" ? youtubeUrl.trim() : mode === "xspace" ? spaceUrl.trim() : undefined;
 
   // "Draft from this" on a lead arrives with the lead's details as ?notes=.
@@ -72,7 +75,11 @@ export default function NewDraftPage() {
     setError(m, "");
     try {
       const res = await request();
-      const data = await res.json();
+      // A hosted copy rejects files over 4.5 MB before Studio sees them, with a page that isn't JSON.
+      if (res.status === 413) {
+        throw new Error("That file is too big for the hosted Studio. Run Studio on your own computer to transcribe it.");
+      }
+      const data = await res.json().catch(() => ({ error: `Transcription failed (error ${res.status}).` }));
       if (!res.ok) throw new Error(data.error || "Transcription failed");
       setText(m, data.text);
       setMethods((x) => ({ ...x, [m]: data.method }));
@@ -95,7 +102,7 @@ export default function NewDraftPage() {
   };
 
   async function generate() {
-    if (!text.trim()) return;
+    if (!text.trim() || onlyLead) return;
     setGenerating(true);
     setError(mode, "");
     setDraft(null);
@@ -152,6 +159,13 @@ export default function NewDraftPage() {
       {/* ---- Notes ---- */}
       {mode === "notes" && (
         <div className="flex flex-col gap-2">
+          {hasUnverifiedLead(texts.notes) && (
+            <div className="rounded-xl border border-bas-gold/30 bg-bas-gold/10 px-4 py-3 text-sm text-gray-200">
+              This lead came from an AI radar and is unverified, so its summary was left out. Open the link, then paste
+              the original post, page or email below. Studio drafts only from what you paste; the marked lead block is
+              ignored.
+            </div>
+          )}
           <textarea
             value={texts.notes}
             onChange={(e) => setText("notes", e.target.value)}
@@ -285,10 +299,13 @@ export default function NewDraftPage() {
 
       {/* ---- Generate ---- */}
       <div className="mt-6">
-        <button onClick={generate} disabled={generating || !text.trim()} className="btn-primary w-full py-3">
+        <button onClick={generate} disabled={generating || !text.trim() || onlyLead} className="btn-primary w-full py-3">
           {generating ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
           {generating ? "Writing your draft…" : "Generate draft in my voice"}
         </button>
+        {onlyLead && !generating && (
+          <p className="mt-2 text-center text-xs text-gray-600">Paste the original source under the lead to begin.</p>
+        )}
         {!text.trim() && !generating && (
           <p className="mt-2 text-center text-xs text-gray-600">
             {mode === "notes" ? "Add some notes to begin." : "Add a source above, then generate."}

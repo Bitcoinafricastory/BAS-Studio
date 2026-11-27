@@ -77,9 +77,12 @@ export const HEADLINE_SEO_RULES = `TITLE AND SEO
 - Good titles: "Btrust Skips Its 2026 Developer Day, Teases Btrust Dev Con 2027"; "Dada Devs Alumna Susan Githaiga Lands Code in Open-Source Bitcoin Mining Firmware Mujina"; "Inside the Circular Bitcoin Africa Fund (CBAF)"; "From Mauritius to El Zonte: Africa's Bitcoin Circular Economies Summit".
 - No em dashes in titles. Use a colon or a comma.
 - seoTitle: at most 60 characters, contains the focus keyword, may differ from the title.
-- metaDescription: 120 to 155 characters, contains the focus keyword, factual, with no opinion or stance.
+- metaDescription: 140 to 160 characters, contains the focus keyword, states the main fact, with no opinion or stance.
 - focusKeywords: the main phrase people would search ("africa bitcoin circular economies"), then up to two secondary phrases, comma-separated, lowercase.
-- excerpt: one or two factual sentences, no hype.`;
+- excerpt: one or two factual sentences, no hype.
+- keyTakeaways: three to five short sentences, each stating something the article itself says. No new facts.
+- faqs: three to five questions a reader would search for, each answered in one or two sentences using only facts in the article.
+- tags: three to eight specific names, places and topics from the article. Never generic tags such as "bitcoin", "crypto" or "blockchain".`;
 
 export const CATEGORY_GUIDE = `CATEGORY GUIDE
 - Adoption: circular economies, merchants, people using bitcoin, funds that pay for adoption.
@@ -163,4 +166,4 @@ export const GENERIC_HEADINGS: string[] = [
   "wrapping up",
 ];
 
-export const SEO_LIMITS = { seoTitleMax: 60, metaMin: 120, metaMax: 155 };
+export const SEO_LIMITS = { seoTitleMax: 60, metaMin: 140, metaMax: 160 };

@@ -1,6 +1,7 @@
 import { xLength, plainLength } from "./count";
 import { findBannedWords, findBannedPhrases, hasContrastFraming } from "../voice/lint";
-import { HANDLE_REGISTRY, BAS_X_HANDLE } from "./registry";
+import { HANDLE_REGISTRY, BAS_X_HANDLE, BAS_X_PREMIUM, X_LIMIT, X_PREMIUM_LIMIT, THREAD_LINES } from "./registry";
+import { BAS_X_OUTPUTS } from "./outputs";
 import type { ArticleRecord, AuthorRecord, CheckResult, FactSheet, OutputId } from "./types";
 
 interface Ctx {
@@ -8,13 +9,14 @@ interface Ctx {
   article: ArticleRecord;
   author: AuthorRecord;
   factSheet: FactSheet;
+  mainPost?: string; // the BAS main post, which the requote must not repeat
 }
 
 const err = (rule: string, message: string): CheckResult => ({ level: "error", rule, message });
 const warn = (rule: string, message: string): CheckResult => ({ level: "warn", rule, message });
 
 const URL_RE = /https?:\/\/\S+/gi;
-const isX = (id: OutputId) => ["x_bas_post", "x_bas_comment", "x_author_post", "x_thread", "x_archive"].includes(id);
+const isX = (id: OutputId) => BAS_X_OUTPUTS.includes(id) || id === "x_author_post";
 const isLinkedIn = (id: OutputId) => id === "li_bas_post" || id === "li_author_post";
 
 function stripNoise(text: string): string {
@@ -23,6 +25,23 @@ function stripNoise(text: string): string {
 
 function handlesIn(text: string): string[] {
   return Array.from(text.matchAll(/(?:^|[^\w])@(\w{1,15})/g)).map((m) => m[1]);
+}
+
+function fiveWordPhrases(text: string): Set<string> {
+  const words = stripNoise(text).toLowerCase().match(/[a-z0-9']+/g) || [];
+  const out = new Set<string>();
+  for (let i = 0; i + 5 <= words.length; i++) out.add(words.slice(i, i + 5).join(" "));
+  return out;
+}
+
+const urlsIn = (text: string) => Array.from(text.matchAll(URL_RE)).map((m) => m[0].replace(/[).,]+$/, ""));
+const sameUrl = (a: string, b: string) => a.replace(/\/+$/, "").toLowerCase() === b.replace(/\/+$/, "").toLowerCase();
+
+/** The X character limit for an output: 280 unless the account posting it has Premium. */
+export function xLimitFor(outputId: OutputId, author: AuthorRecord): number | null {
+  if (outputId === "x_author_post") return author.premium ? X_PREMIUM_LIMIT : X_LIMIT;
+  if (BAS_X_OUTPUTS.includes(outputId)) return BAS_X_PREMIUM ? X_PREMIUM_LIMIT : X_LIMIT;
+  return null;
 }
 
 function allowedHandles({ article, author, factSheet }: Ctx): Set<string> {
@@ -39,28 +58,41 @@ function allowedHandles({ article, author, factSheet }: Ctx): Set<string> {
 export function runChecks(text: string, ctx: Ctx): CheckResult[] {
   const { outputId, article, author, factSheet } = ctx;
   const out: CheckResult[] = [];
-  const lower = text.toLowerCase();
   const hasUrl = text.includes(article.url) || /bitcoinafricastory\.com/i.test(text);
 
   if (outputId === "alt_text") return out;
 
+  // A reply the generator chose to skip has nothing to check.
+  if ((outputId === "x_bas_action" || outputId === "x_bas_extra") && /^skip\.?$/i.test(text.trim())) return out;
+
   // ---- Length
-  if (outputId === "x_author_post") {
-    const cap = author.premium ? 4000 : 280;
+  const xCap = xLimitFor(outputId, author);
+  if (xCap !== null) {
     const len = xLength(text);
-    if (len > cap) out.push(err("length", `${len} characters; the limit for this account is ${cap}.`));
-  } else if (outputId === "x_bas_post") {
-    const len = plainLength(text);
-    if (len < 400 || len > 1000) out.push(warn("length", `${len} characters; aim for 400 to 1,000.`));
+    if (len > xCap) out.push(err("length", `${len} characters; the limit for this account is ${xCap}.`));
   } else if (isLinkedIn(outputId)) {
     const len = plainLength(text);
     if (len > 3000) out.push(err("length", `${len} characters; LinkedIn allows 3,000.`));
   }
 
   // ---- Required parts
+  if (outputId === "x_bas_post" || outputId === "x_archive") {
+    if (!text.trim().endsWith(THREAD_LINES.mainPostEnd)) out.push(err("required", `Must end with "${THREAD_LINES.mainPostEnd}".`));
+    if (urlsIn(text).length || hasUrl) out.push(err("required", "No link in the main post. The link goes in Reply 1."));
+  }
   if (outputId === "x_bas_post") {
-    if (!lower.includes("check the first comment")) out.push(err("required", 'Missing "Check the first comment to read the full story. 👇".'));
-    if (hasUrl) out.push(err("required", "The link must not be in the body of a BAS X post. It goes in the first comment."));
+    if (/(?:[$₦£€]|\b(?:usd|ngn|kes|zar|ghs|ugx|tzs|xof)\b)\s?\d|\d[\d,.]*\s?(?:sats|btc|usd|naira|cedis?|shillings?|rand)\b/i.test(text))
+      out.push(warn("price", "Looks like a price. Prices go in a reply, not the main post."));
+    if (/\b(hurry|last chance|don'?t miss|do not miss|before it'?s too late|limited (?:spots|seats)|only \d+ (?:days?|hours?|spots|seats) left)\b/i.test(text))
+      out.push(warn("pressure", "Deadline pressure. Keep the main post normal and put dates in a reply."));
+  }
+  if (outputId === "x_bas_action" || outputId === "x_bas_extra") {
+    const links = urlsIn(text);
+    if (links.length !== 1) out.push(err("required", "A reply carries exactly one link."));
+    for (const u of links) {
+      if (sameUrl(u, article.url)) out.push(err("required", "The article link belongs in Reply 1, not here."));
+      else if (!article.links.some((l) => sameUrl(l.url, u))) out.push(err("required", `This link is not in the article: ${u}`));
+    }
   }
   if (outputId === "x_bas_comment") {
     if (!text.includes(article.url)) out.push(err("required", "The first comment must contain the article link."));
@@ -68,8 +100,13 @@ export function runChecks(text: string, ctx: Ctx): CheckResult[] {
     if (!text.includes("👇")) out.push(err("required", "Missing the 👇 before the link line."));
   }
   if (outputId === "x_author_post") {
-    if (!/^In my latest for @btcafricastory, I covered/.test(text)) out.push(err("required", 'Must start "In my latest for @btcafricastory, I covered".'));
-    if (!text.includes(article.url)) out.push(err("required", "Must end with the article link."));
+    if (!text.trim().endsWith(THREAD_LINES.requoteEnd)) out.push(err("required", `Must end with "${THREAD_LINES.requoteEnd}".`));
+    if (urlsIn(text).length) out.push(err("required", "No link in the requote. It quotes the main post, which leads to the article."));
+    if (ctx.mainPost) {
+      const main = fiveWordPhrases(ctx.mainPost);
+      const shared = Array.from(fiveWordPhrases(text)).find((g) => main.has(g));
+      if (shared) out.push(err("angle", `Repeats the main post ("${shared}"). Take a different angle.`));
+    }
   }
   if (outputId === "li_bas_post") {
     if (!text.includes(article.url)) out.push(err("required", "The link must be inside the LinkedIn post."));
@@ -86,16 +123,6 @@ export function runChecks(text: string, ctx: Ctx): CheckResult[] {
     }
     if (/(^|\s)@\w+/.test(text)) out.push(err("handles", "LinkedIn posts use full names, not @handles. Tag people by typing @ in LinkedIn."));
   }
-  if (outputId === "x_thread") {
-    const parts = text.split(/^\s*---\s*$/m).map((p) => p.trim());
-    if (parts.length !== 2) out.push(err("required", "A thread must be exactly two posts separated by ---."));
-    else {
-      if (/https?:\/\//.test(parts[0]) || parts[0].includes("bitcoinafricastory.com")) out.push(err("required", "Post 1 must not contain the link."));
-      if (!parts[1].includes(article.url)) out.push(err("required", "Post 2 must contain the link."));
-      if (!new RegExp(`@${author.xHandle.replace(/^@/, "")}\\b`, "i").test(parts[1])) out.push(err("required", "Post 2 must credit the author's @handle."));
-    }
-  }
-  if (outputId === "x_archive" && hasUrl) out.push(err("required", "Archive posts are self-contained; the link goes in the first comment."));
 
   // ---- Banned patterns
   // Shared with the article checks (src/lib/voice). Quoted speech is exempt, since quotes stay exact.

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { getPasscode } from "@/lib/passcode";
-import { SESSION_COOKIE, SESSION_MAX_AGE, createSessionToken, safeEqual } from "@/lib/auth";
+import { getPasscode, missingPasscodeMessage } from "@/lib/passcode";
+import { safeEqual, setSessionCookie } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +22,11 @@ export async function POST(req: NextRequest) {
   if (entry && entry.resetAt > now && entry.count >= MAX_TRIES) {
     return NextResponse.json({ error: "Too many wrong tries. Wait a few minutes and try again." }, { status: 429 });
   }
+  // Count the try before anything is awaited. Counting only after a wrong answer let many
+  // requests sent at once all pass the limit check above.
+  const counted = entry && entry.resetAt > now ? entry : { count: 0, resetAt: now + WINDOW_MS };
+  counted.count++;
+  tries.set(key, counted);
 
   let passcode = "";
   try {
@@ -40,26 +44,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Couldn’t check the passcode right now. Try again in a moment." }, { status: 503 });
   }
   if (!expected) {
-    return NextResponse.json(
-      { error: "No passcode is configured yet. Set one from Settings, or set BAS_STUDIO_PASSCODE in .env.local." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: missingPasscodeMessage() }, { status: 503 });
   }
 
   if (passcode && safeEqual(passcode, expected)) {
     tries.delete(key);
-    cookies().set(SESSION_COOKIE, createSessionToken(), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: SESSION_MAX_AGE,
-    });
+    setSessionCookie();
     return NextResponse.json({ ok: true });
   }
 
-  const fresh = entry && entry.resetAt > now ? entry : { count: 0, resetAt: now + WINDOW_MS };
-  fresh.count++;
-  tries.set(key, fresh);
   return NextResponse.json({ error: "Invalid passcode" }, { status: 401 });
 }

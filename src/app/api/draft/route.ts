@@ -23,6 +23,9 @@ export async function POST(req: NextRequest) {
     if (typeof sourceMaterial !== "string") {
       return NextResponse.json({ error: "sourceMaterial must be text" }, { status: 400 });
     }
+    if (!["notes", "youtube", "audio", "xspace"].includes(kind)) {
+      return NextResponse.json({ error: "Unknown source kind" }, { status: 400 });
+    }
     // About 25,000 words. Longer than this and the model rejects the request with an unreadable error.
     if (sourceMaterial.length > 150_000) {
       return NextResponse.json(
@@ -33,6 +36,9 @@ export async function POST(req: NextRequest) {
     const draft = await generateDraft(sourceMaterial, kind, sourceUrl);
     return NextResponse.json(draft);
   } catch (err: any) {
+    if (typeof err?.message === "string" && err.message.startsWith("These notes only hold an unverified AI lead")) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
     console.error("Draft generation error:", err);
     return NextResponse.json({ error: err.message || "Draft generation failed" }, { status: 500 });
   }

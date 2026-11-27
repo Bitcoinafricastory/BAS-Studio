@@ -3,6 +3,7 @@ import { getAdminDb } from "@/lib/firebase-admin";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { requireAuth } from "@/lib/auth";
+import { MIN_PASSCODE_LENGTH } from "@/lib/passcode";
 
 // Every route here reads request-time secrets (Firebase, Anthropic, xAI) or
 // request data — never build-time static content. Without this, Next.js
@@ -76,17 +77,24 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const entry = (Object.entries(body) as [Field, string][]).find(([, v]) => typeof v === "string");
+    const entry = (Object.entries(body ?? {}) as [string, unknown][]).find(([, v]) => typeof v === "string");
     if (!entry) {
       return NextResponse.json({ error: "No valid field provided" }, { status: 400 });
     }
-    const [field, rawValue] = entry;
-    const value = rawValue.trim();
+    // Object.hasOwn, not `in`: `in` also matches inherited names like "constructor".
+    if (!Object.hasOwn(FIELD_LABEL, entry[0])) {
+      return NextResponse.json({ error: "Unknown field" }, { status: 400 });
+    }
+    const field = entry[0] as Field;
+    const value = (entry[1] as string).trim();
     if (!value) {
       return NextResponse.json({ error: `${FIELD_LABEL[field]} value is required` }, { status: 400 });
     }
-    if (!(field in FIELD_LABEL)) {
-      return NextResponse.json({ error: "Unknown field" }, { status: 400 });
+    if (field === "passcode" && value.length < MIN_PASSCODE_LENGTH) {
+      return NextResponse.json(
+        { error: `Use at least ${MIN_PASSCODE_LENGTH} characters for the passcode.` },
+        { status: 400 }
+      );
     }
 
     const validationError = await validate(field, value);
@@ -113,9 +121,16 @@ export async function DELETE(req: NextRequest) {
 
   try {
     const { searchParams } = new URL(req.url);
-    const field = searchParams.get("field") as Field | null;
-    if (!field || !(field in FIELD_LABEL)) {
+    const field = searchParams.get("field");
+    if (!field || !Object.hasOwn(FIELD_LABEL, field)) {
       return NextResponse.json({ error: "field query param is required" }, { status: 400 });
+    }
+    // Removing the passcode used to unlock the whole app for anyone. It can be changed, never removed.
+    if (field === "passcode") {
+      return NextResponse.json(
+        { error: "The passcode can be changed but not removed. Studio stays locked without one." },
+        { status: 400 }
+      );
     }
     const db = getAdminDb();
     await db.collection(SETTINGS_COLLECTION).doc(SECRETS_DOC).set({ [field]: null }, { merge: true });

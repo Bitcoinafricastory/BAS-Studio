@@ -59,7 +59,9 @@ export async function fetchXRadar(): Promise<Lead[]> {
       })
     );
   } catch (err) {
-    console.error("X radar failed (check XAI_API_KEY):", err);
-    return [];
+    // A bonus signal, not the critical path: the Leads route catches this and shows a short note,
+    // so the reason reaches the editor instead of an empty list.
+    console.error("X radar failed:", err);
+    throw err;
   }
 }

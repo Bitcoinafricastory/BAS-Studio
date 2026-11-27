@@ -1,10 +1,13 @@
+// The BAS X thread: main post, Reply 1 (the link), Reply 2 (one action), optional Reply 3,
+// then the author's requote (kept under its old id, x_author_post, so saved posts still match).
 export type OutputId =
   | "x_bas_post"
   | "x_bas_comment"
+  | "x_bas_action"
+  | "x_bas_extra"
   | "x_author_post"
   | "li_bas_post"
   | "li_author_post"
-  | "x_thread"
   | "x_archive"
   | "alt_text";
 
